@@ -10,6 +10,7 @@ from warnings import warn
 
 from maya import cmds  # type: ignore
 
+from maya_zen_tools import options
 from maya_zen_tools._utilities import (
     create_locator,
     get_components_shape,
@@ -22,7 +23,6 @@ from maya_zen_tools.errors import (
     TooManyShapesError,
 )
 from maya_zen_tools.menu import CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL
-from maya_zen_tools.options import options
 
 WINDOW: str = "zenToolsWindow"
 DISTRIBUTION_TYPE_RADIO_BUTTON: str = "zenToolsDistributeTypeRadioButton"
@@ -562,7 +562,7 @@ def show_curve_distribute_vertices_options() -> None:
     """
     # Get saved options
     get_option: Callable[[str], str | int | float | None] = partial(
-        options.get, "curve_distribute_vertices"
+        options.get_tool_option, "curve_distribute_vertices"
     )
     # Create the window
     if cmds.window(WINDOW, exists=True):
@@ -593,13 +593,13 @@ def show_curve_distribute_vertices_options() -> None:
         columnAlign=(1, "left"),
         changeCommand1=(
             "from maya_zen_tools import options\n"
-            "options.options.set("
+            "options.set_tool_option("
             "'curve_distribute_vertices', 'distribution_type', "
             "'UNIFORM')"
         ),
         changeCommand2=(
             "from maya_zen_tools import options\n"
-            "options.options.set("
+            "options.set_tool_option("
             "'curve_distribute_vertices', 'distribution_type', "
             "'PROPORTIONAL')"
         ),
@@ -613,13 +613,13 @@ def show_curve_distribute_vertices_options() -> None:
         value=get_option("create_deformer", False),  # type: ignore
         onCommand=(
             "from maya_zen_tools import options\n"
-            "options.options.set("
+            "options.set_tool_option("
             "'curve_distribute_vertices', 'create_deformer', "
             "True)"
         ),
         offCommand=(
             "from maya_zen_tools import options\n"
-            "options.options.set("
+            "options.set_tool_option("
             "'curve_distribute_vertices', 'create_deformer', "
             "False)"
         ),
@@ -642,7 +642,7 @@ def do_curve_distribute_vertices() -> None:
     """
     Execute `loop`, getting arguments from the UI or saved options
     """
-    kwargs: dict[str, float | bool | str] = options.gets(
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
         "curve_distribute_vertices"
     )
     curve_distribute_vertices(**kwargs)  # type: ignore

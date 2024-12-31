@@ -67,7 +67,10 @@ def create_menu() -> None:
     )
     cmds.menuItem(
         label=LOFT_DISTRIBUTE_BETWEEN_EDGE_LOOPS_LABEL,
-        command=("from maya_zen_tools import loft;loft.do_loft_distribute()"),
+        command=(
+            "from maya_zen_tools import loft\n"
+            "loft.do_loft_distribute_between_edges()"
+        ),
         annotation=(
             "Distribute vertices between two or more parallel edge loops."
         ),
@@ -77,7 +80,7 @@ def create_menu() -> None:
         optionBox=True,
         command=(
             "from maya_zen_tools import loft;"
-            "loop.show_loft_distribute_options()"
+            "loft.show_loft_distribute_between_edges_options()"
         ),
         parent=MENU,
     )

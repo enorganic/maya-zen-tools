@@ -8,7 +8,7 @@ from maya import cmds  # type: ignore
 OPTIONS_PATH: Path = Path(cmds.internalVar(userPrefDir=True)) / "ZenTools.json"
 
 
-class Options:
+class _Options:
     def __init__(self) -> None:
         self._dict: dict[str, dict[str, str | int | float]] = {}
 
@@ -60,4 +60,38 @@ class Options:
             json.dump(self._dict, options_io, indent=4)
 
 
-options: Options = Options()
+_options: _Options = _Options()
+
+
+def get_tool_options(
+    tool: str,
+) -> dict[str, bool | str | int | float]:
+    """
+    Get all options for a tool.
+    """
+    return _options.gets(tool)
+
+
+def get_tool_option(
+    tool: str, option: str, default: float | str | bool | None = None
+) -> bool | str | float | None:
+    """
+    Get a single option for a tool.
+    """
+    return _options.get(tool, option, default)
+
+
+def set_tool_options(
+    tool: str, options_values: dict[str, bool | str | int | float]
+) -> None:
+    """
+    Set all options for a tool.
+    """
+    _options.sets(tool, options_values)
+
+
+def set_tool_option(tool: str, option: str, value: bool | float | str) -> None:
+    """
+    Set a tool option.
+    """
+    _options.set(tool, option, value)

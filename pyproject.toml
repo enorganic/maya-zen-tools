@@ -73,7 +73,6 @@ extra-dependencies = [
 ]
 
 [tool.ruff]
-extend-exclude = ["zen"]
 line-length = 79
 
 [tool.ruff.lint]
