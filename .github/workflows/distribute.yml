@@ -1,0 +1,41 @@
+name: distribute
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - main
+    paths:
+    - pyproject.toml
+    - .github/workflows/distribute.yml
+jobs:
+  distribute:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Hatch
+      uses: pypa/hatch@install
+    - name: install
+      run: make
+    - name: configure git
+      run: |
+        git config --global user.email "$(git --no-pager show -s --format=%ae)" && \
+        git config --global user.name "$(git --no-pager show -s --format=%an)"
+    - name: tag version
+      run: |
+        hatch run gittable tag-version
+    - name: push tags
+      run: git push --tags || echo "Tag already exists"
+    - name: create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release create "$(hatch version)" || echo "Release already exists"
+    - name: distribute
+      env:
+        HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
+        HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
+      run: make distribute
+    - name: Build and deploy documentation
+      run: hatch run docs:mkdocs gh-deploy --force
+

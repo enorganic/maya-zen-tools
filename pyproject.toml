@@ -1,0 +1,125 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "maya-zen-tools"
+version = "0.0.0"
+description = "Zen Tools for Maya"
+readme = "README.md"
+license = "MIT"
+requires-python = "~=3.8"
+authors = [
+    { email = "david@belais.me" },
+]
+keywords = [
+    "maya",
+    "zen-tools",
+]
+dependencies = [
+    "platformdirs~=4.3",
+    "more-itertools~=10.5",
+]
+
+[project.urls]
+Repository = "https://github.com/davebelais/maya-zen-tools"
+
+[tool.hatch.build.targets.sdist]
+packages = [
+    "src/maya_zen_tools",
+]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/maya_zen_tools",
+]
+sources = ["src"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest",
+    "mypy",
+    "dependence~=1.0"
+]
+program_name = "mayapy"
+pre-install-commands = [
+    "pip install --upgrade pip",
+]
+post-install-commands = [
+    "hatch run mypy --install-types --non-interactive || echo",
+]
+
+[tool.hatch.envs.hatch-static-analysis]
+extra-args = ["-s", "-vv"]
+extra-dependencies = ["dependence~=1.0"]
+
+
+[tool.hatch.envs.docs]
+dependencies = [
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "black",
+    "dependence~=1.0",
+]
+pre-install-commands = []
+post-install-commands = []
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies = [
+    "dependence~=1.0",
+]
+
+[tool.ruff]
+extend-exclude = ["zen"]
+line-length = 79
+
+[tool.ruff.lint]
+ignore = [
+    "F842", "INP001"
+]
+extend-select = [
+    "E",
+    "F",
+    "UP",
+    "B",
+    "SIM",
+    "I",
+    "C",
+    "N",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 79
+
+[tool.black]
+line-length = 79
+target-version = [
+    "py38",
+    "py39",
+    "py310",
+    "py311",
+    "py312",
+    "py313",
+]
+
+[tool.mypy]
+files = [
+    "src",
+    "tests",
+]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.coverage.report]
+fail_under = 80
+
+[tool.coverage.paths]
+source = ["src"]
+

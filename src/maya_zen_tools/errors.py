@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from typing import Sequence
+
+
+class ZenToolsWarning(Warning):
+    pass
+
+
+class MultipleVertexPathsPossibleWarning(ZenToolsWarning):
+    pass
+
+
+class ZenToolsError(Exception):
+    """
+    Base class for ZenTools Exceptions
+    """
+
+
+class InvalidSelectionError(Exception):
+    pass
+
+
+class NonLinearSelectionError(InvalidSelectionError):
+    pass
+
+
+class NonContiguousMeshSelectionError(InvalidSelectionError):
+    pass
+
+
+class TooManyShapesError(InvalidSelectionError):
+    """
+    Raised when a loop or loft is attempted using
+    components from more than one polygon mesh.
+    """
+
+    def __init__(self, shapes: Sequence[str]) -> None:
+        self.shapes: tuple[str, ...] = tuple(shapes)
+        super().__init__(shapes)
+
+    def __repr__(self) -> str:
+        return (
+            f"TooManyShapesError({self.shapes!r}): "
+            "Selected components must all belong to the same shape."
+        )
+
+    def __str__(self) -> str:
+        return repr(self)
