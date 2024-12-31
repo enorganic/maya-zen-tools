@@ -1,6 +1,6 @@
 site_name: maya-zen-tools
-site_url: https://davebelais.github.io/maya-zen-tools/
-repo_url: https://github.com/davebelais/maya-zen-tools/
+site_url: https://enorganic.github.io/maya-zen-tools/
+repo_url: https://github.com/enorganic/maya-zen-tools/
 edit_uri: blob/main/docs/
 nav:
 - Introduction: 'index.md'

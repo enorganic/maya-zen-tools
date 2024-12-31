@@ -11,7 +11,7 @@
     ```bash
     cd ~/Code && \
     git clone\
-    https://github.com/davebelais/maya-zen-tools.git maya-zen-tools && \
+    https://github.com/enorganic/maya-zen-tools.git maya-zen-tools && \
     cd maya-zen-tools && \
     make
     ```

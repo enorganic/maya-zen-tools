@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/davebelais/maya-zen-tools"
+Repository = "https://github.com/enorganic/maya-zen-tools"
 
 [tool.hatch.build.targets.sdist]
 packages = [
