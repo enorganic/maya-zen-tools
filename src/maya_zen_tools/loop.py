@@ -11,8 +11,8 @@ from warnings import warn
 from maya import cmds  # type: ignore
 
 from maya_zen_tools import options
-from maya_zen_tools._utilities import (
-    create_locator,
+from maya_zen_tools._create import create_locator
+from maya_zen_tools._traverse import (
     get_components_shape,
     get_expanded_vertices,
     iter_sorted_edge_loop_vertices,

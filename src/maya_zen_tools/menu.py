@@ -84,3 +84,8 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
+    cmds.menuItem(
+        optionBox=True,
+        command=("from maya_zen_tools import upgrade\n" "upgrade.main()"),
+        parent=MENU,
+    )
