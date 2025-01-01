@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 from subprocess import check_call
 from typing import TYPE_CHECKING
 
 from maya import cmds  # type: ignore
 
-from maya_zen_tools._utilities import find_user_setup_py
+from maya_zen_tools._utilities import find_user_setup_py, which_mayapy
 from maya_zen_tools.menu import MENU
 
 if TYPE_CHECKING:
@@ -42,7 +41,7 @@ def uninstall() -> None:
     # Uninstall the `maya-zen-tools` package
     check_call(
         [
-            sys.executable,
+            which_mayapy(),
             "-m",
             "pip",
             "uninstall",

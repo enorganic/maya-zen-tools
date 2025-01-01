@@ -3,7 +3,9 @@
 [![test](https://github.com/enorganic/maya-zen-tools/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/enorganic/maya-zen-tools/actions/workflows/test.yml)
 [![PyPI version](https://badge.fury.io/py/maya-zen-tools.svg?icon=si%3Apython)](https://badge.fury.io/py/maya-zen-tools)
 
-TODO: Introduction
+ZenTools for Maya is a set of modeling tools for manipulating a polygon mesh
+using dynamically created NURBS curves and surfaces to distribute vertices
+and/or UVs.
 
 ## Installation
 
@@ -14,11 +16,13 @@ into your script editor (the semicolons are necessary in order to avoid
 opening the multi-line script editor):
 
 ```python
-import sys;
 from subprocesses import check_call;
+from pathlib import Path;
+from maya import cmds;
 
-check_call([sys.executable, "-m", "pip", "install", "maya-zen-tools"]);
-check_call([sys.executable, "-m", "maya_zen_tools.install"]);
+mayapy: Path = Path(cmds.internalVar(mayaInstallDir=True)) / "bin" / "mayapy";
+check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"]);
+check_call([mayapy, "-m", "maya_zen_tools.install"]);
 
 from maya_zen_tools import startup
 ```

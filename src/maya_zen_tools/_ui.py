@@ -18,7 +18,7 @@ def show_confirmation_dialogue(
         cancel_command: The command to execute if the user clicks "Cancel".
         title: The title for the dialogue window.
     """
-    window: str = cmds.window(**({"title": title} if title else {}))
+    window: str = cmds.window(title=title or label)
     column_layout: str = cmds.columnLayout(parent=window, margins=15)
     cmds.text(
         label=f"{label.rstrip()}\n",
@@ -32,7 +32,7 @@ def show_confirmation_dialogue(
         command=(
             f"{yes_command}\n"
             "from maya import cmds\n"
-            f"cmds.deleteUI({window})"
+            f"cmds.deleteUI('{window}')"
         ),
     )
     cmds.button(
@@ -41,7 +41,7 @@ def show_confirmation_dialogue(
         command=(
             f"{cancel_command}\n"
             "from maya import cmds\n"
-            f"cmds.deleteUI({window})"
+            f"cmds.deleteUI('{window}')"
         ),
     )
     cmds.showWindow(window)

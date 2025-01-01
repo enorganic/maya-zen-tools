@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import contextlib
 import importlib
+import json
 import sys
+from subprocess import check_output
 from traceback import format_exception
 from typing import TYPE_CHECKING
 
@@ -18,6 +20,15 @@ try:
 except ImportError:
     has_maya_cmds = False
 
+MAYA_ZEN_TOOLS: str = "maya-zen-tools"
+
+
+def which_mayapy() -> Path:
+    maya_location: str | None = os.environ.get("MAYA_LOCATION")
+    if maya_location:
+        return Path(maya_location) / "bin" / "mayapy"
+    return Path(sys.executable)
+
 
 def reload() -> None:
     """
@@ -26,7 +37,7 @@ def reload() -> None:
     name: str
     module: ModuleType
     for name, module in tuple(sys.modules.items()):
-        if name.startswith("maya_zen_tools.") or (name == "maya_zen_tools"):
+        if name.startswith("maya_zen_tools.") or name == "maya_zen_tools":
             with contextlib.suppress(ModuleNotFoundError):
                 importlib.reload(module)
 
@@ -64,3 +75,16 @@ def find_user_setup_py() -> Path:
         scripts_directory = Path(maya_app_dir) / "scripts"
     os.makedirs(scripts_directory, exist_ok=True)
     return scripts_directory / "userSetup.py"
+
+
+def get_maya_zen_tools_package_info() -> dict[str, str]:
+    package_info: dict[str, str]
+    for package_info in json.loads(
+        check_output(
+            [which_mayapy(), "-m", "pip", "list", "--format", "json"],
+            text=True,
+        ).strip()
+    ):
+        if package_info["name"] == MAYA_ZEN_TOOLS:
+            return package_info
+    raise KeyError(MAYA_ZEN_TOOLS)

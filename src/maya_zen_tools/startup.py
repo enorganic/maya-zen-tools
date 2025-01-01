@@ -5,30 +5,45 @@ to your userSetup.py script by running `mayapy -m maya_zen_tools.install`.
 
 from __future__ import annotations
 
+import contextlib
+
 from maya import cmds  # type: ignore
 
 from maya_zen_tools.menu import create_menu
+from maya_zen_tools.upgrade import upgrade
 
 
 def set_selection_priority() -> None:
     """
     This sets selection priority needed for manipulating deformers effectively
     """
-    surface_selection_priority: int = cmds.selectPriority(
-        query=True,
-        nurbsSurface=True,
+    surface_selection_priority: int = (
+        cmds.selectPriority(
+            query=True,
+            nurbsSurface=True,
+        )
+        or 0
     )
-    curve_selection_priority: int = cmds.selectPriority(
-        query=True,
-        nurbsCurve=True,
+    curve_selection_priority: int = (
+        cmds.selectPriority(
+            query=True,
+            nurbsCurve=True,
+        )
+        or 0
     )
-    polymesh_selection_priority: int = cmds.selectPriority(
-        query=True,
-        polymesh=True,
+    polymesh_selection_priority: int = (
+        cmds.selectPriority(
+            query=True,
+            polymesh=True,
+        )
+        or 0
     )
-    locator_selection_priority: int = cmds.selectPriority(
-        query=True,
-        locatorXYZ=True,
+    locator_selection_priority: int = (
+        cmds.selectPriority(
+            query=True,
+            locatorXYZ=True,
+        )
+        or 0
     )
     # Surface selection should be higher priority than polymesh selection
     if surface_selection_priority <= polymesh_selection_priority:
@@ -51,6 +66,13 @@ def set_selection_priority() -> None:
 
 
 def main() -> None:
+    """
+    The main entry point for `maya-zen-tools startup`.
+    """
+    # Don't raise errors if the upgrade fails, just continue to use the
+    # installed version
+    with contextlib.suppress(Exception):
+        upgrade()
     # Set selection preferences to track selection order
     cmds.selectPref(
         trackSelectionOrder=True,
