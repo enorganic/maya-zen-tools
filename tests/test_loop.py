@@ -42,20 +42,11 @@ def test_select_edges_between_vertices() -> None:
         f"{poly_plane_uniform}.e[52]",
         f"{poly_plane_uniform}.e[54]",
     ]
-    cmds.select(f"{poly_plane_uniform}.vtx[113]", add=True)
+    cmds.select(clear=True)
+    cmds.select(f"{poly_plane_uniform}.vtx[113]")
     cmds.select(f"{poly_plane_uniform}.vtx[24]", add=True)
     select_edges_between_vertices()
     assert cmds.ls(flatten=True, orderedSelection=True) == [
-        f"{poly_plane_uniform}.e[36]",
-        f"{poly_plane_uniform}.e[38]",
-        f"{poly_plane_uniform}.e[40]",
-        f"{poly_plane_uniform}.e[42]",
-        f"{poly_plane_uniform}.e[44]",
-        f"{poly_plane_uniform}.e[46]",
-        f"{poly_plane_uniform}.e[48]",
-        f"{poly_plane_uniform}.e[50]",
-        f"{poly_plane_uniform}.e[52]",
-        f"{poly_plane_uniform}.e[54]",
         f"{poly_plane_uniform}.e[45]",
         f"{poly_plane_uniform}.e[66]",
         f"{poly_plane_uniform}.e[87]",
