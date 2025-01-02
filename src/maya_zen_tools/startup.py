@@ -81,4 +81,4 @@ def main() -> None:
     create_menu()
 
 
-main()
+cmds.evalDeferred(main)

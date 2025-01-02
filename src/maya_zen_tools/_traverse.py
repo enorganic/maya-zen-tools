@@ -235,8 +235,10 @@ def iter_selected_components(
             `maya.cmds.ls` will be used.
     """
     component_type: str
-    component_types: set[str] = {
-        "vtx"
+    component_types_: set[str] = {
+        "f"
+        if component_type == "face"
+        else "vtx"
         if component_type == "vertex"
         else "e"
         if component_type == "edge"
@@ -253,5 +255,5 @@ def iter_selected_components(
         if not selected_object and component:
             continue
         component_type = component.rpartition("[")[0]
-        if component_type and (component_type in component_types):
+        if component_type and (component_type in component_types_):
             yield selected

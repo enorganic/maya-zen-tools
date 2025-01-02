@@ -110,7 +110,7 @@ def create_menu() -> None:
     )
     cmds.menuItem(
         label="Flood Select",
-        command=("from maya_zen_tools import select;select.flood_select()"),
+        command="from maya_zen_tools import flood\nflood.flood_select()",
         annotation=(
             "Selected Edges will define a selection border, selected vertices "
             "or faces will determine the portion of the mesh to be selected."
