@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from maya import cmds  # type: ignore
 
+WINDOW: str = "zenToolsWindow"
+
 
 def show_confirmation_dialogue(
     label: str,

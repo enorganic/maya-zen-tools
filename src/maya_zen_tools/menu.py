@@ -90,7 +90,10 @@ def create_menu() -> None:
     # Selection
     cmds.menuItem(
         label=SELECT_EDGES_BETWEEN_VERTICES_LABEL,
-        command=("from maya_zen_tools import loop;loop.do_select_loop()"),
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.do_select_edges_between_vertices()"
+        ),
         annotation=(
             "Selects an edge path containing the fewest edges necessary to "
             "connect selected vertices."
@@ -98,8 +101,16 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
+        optionBox=True,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.show_select_edges_between_vertices_options()"
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
         label="Flood Select",
-        command=("from maya_zen_tools import select;select.do_flood_select()"),
+        command=("from maya_zen_tools import select;select.flood_select()"),
         annotation=(
             "Selected Edges will define a selection border, selected vertices "
             "or faces will determine the portion of the mesh to be selected."

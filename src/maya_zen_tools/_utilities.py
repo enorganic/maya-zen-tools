@@ -68,9 +68,11 @@ def find_user_setup_py() -> Path:
             maya_app_dir = (
                 os.path.expanduser("~/Library/Preferences/Autodesk/Maya")
                 if sys.platform == "darwin"
-                else os.path.expanduser("~/Documents/Maya")
-                if sys.platform.startswith("win")
-                else os.path.expanduser("~/Maya")
+                else (
+                    os.path.expanduser("~/Documents/Maya")
+                    if sys.platform.startswith("win")
+                    else os.path.expanduser("~/Maya")
+                )
             )
         scripts_directory = Path(maya_app_dir) / "scripts"
     os.makedirs(scripts_directory, exist_ok=True)

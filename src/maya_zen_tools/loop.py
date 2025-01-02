@@ -15,16 +15,19 @@ from maya_zen_tools._create import create_locator
 from maya_zen_tools._traverse import (
     get_components_shape,
     get_expanded_vertices,
+    iter_selected_components,
     iter_sorted_edge_loop_vertices,
 )
+from maya_zen_tools._ui import WINDOW
 from maya_zen_tools.errors import (
     MultipleVertexPathsPossibleWarning,
     NonContiguousMeshSelectionError,
-    TooManyShapesError,
 )
-from maya_zen_tools.menu import CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL
+from maya_zen_tools.menu import (
+    CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
+    SELECT_EDGES_BETWEEN_VERTICES_LABEL,
+)
 
-WINDOW: str = "zenToolsWindow"
 DISTRIBUTION_TYPE_RADIO_BUTTON: str = "zenToolsDistributeTypeRadioButton"
 
 
@@ -145,6 +148,45 @@ def _iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
         is_first = False
 
 
+def _iter_vertices_edges(vertices: Iterable[str]) -> Iterable[str]:
+    """
+    Yield the edges between a series of ordered vertices, in the same
+    order as the vertices
+    """
+    vertices = iter(vertices)
+    try:
+        start_vertex: str = next(vertices)
+    except StopIteration:
+        return
+    end_vertex: str
+    for end_vertex in vertices:
+        yield from cmds.polyListComponentConversion(
+            start_vertex,
+            end_vertex,
+            fromVertex=True,
+            toEdge=True,
+            internal=True,
+        )
+        start_vertex = end_vertex
+
+
+def _iter_uvs_edges(uvs: Iterable[str]) -> Iterable[str]:
+    """
+    Yield the edges between a series of ordered UVs, in the same
+    order as the UVs
+    """
+    uvs = iter(uvs)
+    try:
+        start_uv: str = next(uvs)
+    except StopIteration:
+        return
+    end_uv: str
+    for end_uv in uvs:
+        yield cmds.polyListComponentConversion(
+            start_uv, end_uv, fromUV=True, toEdge=True, internal=True
+        )
+
+
 def _iter_shortest_vertices_path_proportionate_positions(
     selected_vertices: Iterable[str],
 ) -> Iterable[tuple[str, float]]:
@@ -228,7 +270,7 @@ def _get_vertices_locator_scale(vertices: Sequence[str]) -> float:
     Parameters:
         vertices: A list of vertices.
     """
-    edges: list[str] = cmds.ls(
+    edges: tuple[str] = cmds.ls(
         *cmds.polyListComponentConversion(*vertices, toEdge=True), flatten=True
     )
     average_edge_length: float = sum(map(cmds.arclen, edges)) / len(edges)
@@ -478,11 +520,56 @@ def _distribute_vertices_loop_along_curve(
     return curve_shape
 
 
+def select_edges_between_vertices(
+    *selected_vertices: str,
+    use_selection_order: bool = False,
+) -> tuple[str, ...]:
+    """
+    Add the edges forming the shortest path between selected vertices to
+    the current selection.
+
+    Parameters:
+        use_selection_order: If `True`, the edge path will follow the selection
+            order, if two or more vertices are selected.
+
+    Returns:
+        A tuple of the selected edges.
+    """
+    cmds.waitCursor(state=True)
+    if use_selection_order:
+        # Check to make sure that selection order is being tracked, and fall
+        # back to automatic sorting if not.
+        use_selection_order = cmds.selectPref(
+            trackSelectionOrder=True, query=True
+        )
+    # If vertices are not explicitly passed, we get them by
+    # flattening the current selection of vertices
+    selected_vertices = selected_vertices or tuple(
+        iter_selected_components("vtx")
+    )
+    if not use_selection_order:
+        # If we have opted not to use selection order, or are unable to because
+        # it is not being tracked, we fall back to auomatic sorting
+        selected_vertices = tuple(
+            iter_sorted_edge_loop_vertices(selected_vertices)
+        )
+    edges: tuple[str, ...] = tuple(
+        _iter_vertices_edges(_iter_shortest_vertices_path(selected_vertices))
+    )
+    # Select edges
+    cmds.select(*edges, add=True)
+    # Deselect vertices
+    cmds.select(selected_vertices, deselect=True)
+    cmds.waitCursor(state=False)
+    return edges
+
+
 def curve_distribute_vertices(
-    *,
+    *selected_vertices: str,
     distribution_type: str = DistributionType.UNIFORM,
     create_deformer: bool = False,
-) -> None:
+    use_selection_order: bool = False,
+) -> tuple[str, ...]:
     """
     Create a curve passing between selected vertices and distribute all
     vertices on the edge loop segment along the curve.
@@ -491,7 +578,7 @@ def curve_distribute_vertices(
     will be an "edit point" (EP) curve.
 
     Parameters:
-        selection: A list of vertices to create the curve from. If not
+        selected_vertices: A list of vertices to create the curve from. If not
             provided, the current selection will be used.
         distribution_type: How to distribute vertices along the curve.
             UNIFORM: Distribute vertices equidistant along the curve.
@@ -499,30 +586,33 @@ def curve_distribute_vertices(
                 proportional to their original lengths in relation the sum
                 of all edge lengths.
         create_deformer: If `True`, create a deformer.
+        use_selection_order: If `True`, the curve will be created in selection
+            order, otherwise, it will be automatically sorted.
+
+    Returns:
+        A tuple of the affected vertices.
     """
     cmds.waitCursor(state=True)
-    # If selection order is being tracked, we can sort vertices by the order
-    # in which they were selected, so we want to determine this first
-    tracking_selection_order: bool = cmds.selectPref(
-        trackSelectionOrder=True, query=True
-    )
-    selection: tuple[str] = tuple(cmds.ls(orderedSelection=True, flatten=True))
-    selected_vertices: tuple[str, ...] = tuple(
-        cmds.ls(
-            *cmds.polyListComponentConversion(
-                *selection, fromVertex=True, toVertex=True
-            ),
-            orderedSelection=True,
-            flatten=True,
+    if use_selection_order:
+        # Check to make sure that selection order is being tracked, and fall
+        # back to automatic sorting if not.
+        use_selection_order = cmds.selectPref(
+            trackSelectionOrder=True, query=True
         )
+    # This is the original selection, which will be restored after the command
+    # is executed, unless a deformer is created, in which case the deformer
+    # will be selected
+    selection: tuple[str] = tuple(cmds.ls(orderedSelection=True, flatten=True))
+    # If vertices are not explicitly passed, we get them by
+    # flattening the current selection of vertices
+    selected_vertices = selected_vertices or tuple(
+        iter_selected_components("vtx", selection=selection)
     )
-    # Get the list of polygon meshes that the selected vertices belong to
-    shapes: tuple[str] = tuple(cmds.ls(*selected_vertices, objectsOnly=True))
-    if len(shapes) != 1:
-        raise TooManyShapesError(shapes)
-    if not tracking_selection_order:
-        # If selection order is not being tracked, we need to auto-sort
-        # the vertices
+    # Raise an error if selected vertices span more than one mesh
+    get_components_shape(selected_vertices)
+    if not use_selection_order:
+        # If we have opted not to use selection order, or are unable to because
+        # it is not being tracked, we fall back to auomatic sorting
         selected_vertices = tuple(
             iter_sorted_edge_loop_vertices(selected_vertices)
         )
@@ -547,18 +637,20 @@ def curve_distribute_vertices(
         cmds.delete(curve_transform, constructionHistory=True)
         cmds.delete(curve_transform)
         cmds.select(selection)
-        return
+        return selected_vertices
     # Go into object selection mode, in order to manipulate locators
     cmds.selectMode(object=True)
     # Select a center locator, if there are more than two, otherwise select
     # an end locator
     cmds.select(locators[ceil(len(locators) / 2)])
     cmds.waitCursor(state=False)
+    return selected_vertices
 
 
 def show_curve_distribute_vertices_options() -> None:
     """
-    Show a window with loop distribute options.
+    Show a window with options to use when executing
+    `curve_distribute_vertices`.
     """
     # Get saved options
     get_option: Callable[[str], str | int | float | None] = partial(
@@ -608,6 +700,25 @@ def show_curve_distribute_vertices_options() -> None:
     )
     cmds.separator(parent=column_layout)
     cmds.checkBox(
+        label="Use Selection Order",
+        parent=column_layout,
+        value=get_option("use_selection_order", True),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_vertices', 'use_selection_order', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_vertices', 'use_selection_order', "
+            "False)"
+        ),
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
         label="Create Deformer",
         parent=column_layout,
         value=get_option("create_deformer", False),  # type: ignore
@@ -640,9 +751,73 @@ def show_curve_distribute_vertices_options() -> None:
 
 def do_curve_distribute_vertices() -> None:
     """
-    Execute `loop`, getting arguments from the UI or saved options
+    Execute `curve_distribute_vertices`, getting arguments from the UI or
+    saved options.
     """
     kwargs: dict[str, float | bool | str] = options.get_tool_options(
         "curve_distribute_vertices"
     )
     curve_distribute_vertices(**kwargs)  # type: ignore
+
+
+def show_select_edges_between_vertices_options() -> None:
+    """
+    Show a window with options to use when executing
+    `select_edges_between_vertices`.
+    """
+    # Get saved options
+    get_option: Callable[[str], str | int | float | None] = partial(
+        options.get_tool_option, "select_edges_between_vertices"
+    )
+    # Create the window
+    if cmds.window(WINDOW, exists=True):
+        cmds.deleteUI(WINDOW)
+    cmds.window(
+        WINDOW,
+        width=240,
+        height=100,
+        title=f"ZenTools: {SELECT_EDGES_BETWEEN_VERTICES_LABEL} Options",
+    )
+    column_layout: str = cmds.columnLayout(
+        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+    )
+    cmds.checkBox(
+        label="Use Selection Order",
+        parent=column_layout,
+        value=get_option("use_selection_order", True),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_vertices', 'use_selection_order', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_vertices', 'use_selection_order', "
+            "False)"
+        ),
+        height=30,
+    )
+    cmds.button(
+        label="Select",
+        parent=column_layout,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "from maya import cmds\n"
+            "loop.do_select_edges_between_vertices()\n"
+            f"cmds.deleteUI('{WINDOW}')"
+        ),
+    )
+    cmds.showWindow(WINDOW)
+
+
+def do_select_edges_between_vertices() -> None:
+    """
+    Execute `curve_distribute_vertices`, getting arguments from the UI or
+    saved options.
+    """
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
+        "select_edges_between_vertices"
+    )
+    select_edges_between_vertices(**kwargs)  # type: ignore
