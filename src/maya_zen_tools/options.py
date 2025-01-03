@@ -5,6 +5,23 @@ from pathlib import Path
 
 from maya import cmds  # type: ignore
 
+
+class DistributionType:
+    """
+    An enumeration of the different types of distribution that can be used
+    when distributing vertices.
+
+    Attributes:
+        UNIFORM: Distribute vertices equidistant along the curve or surface.
+        PROPORTIONAL: Distribute vertices such that edge lengths are
+            proportional to their original lengths in relation the sum
+            of all edge lengths.
+    """
+
+    UNIFORM: str = "UNIFORM"
+    PROPORTIONAL: str = "PROPORTIONAL"
+
+
 OPTIONS_PATH: Path = Path(cmds.internalVar(userPrefDir=True)) / "ZenTools.json"
 
 

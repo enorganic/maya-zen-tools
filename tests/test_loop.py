@@ -8,10 +8,10 @@ from maya import cmds  # type: ignore  # noqa: E402
 
 from maya_zen_tools import startup  # noqa
 from maya_zen_tools.loop import (  # noqa: E402
-    DistributionType,
     curve_distribute_vertices,
     select_edges_between_vertices,
 )
+from maya_zen_tools.options import DistributionType  # noqa: E402
 
 
 def test_select_edges_between_vertices() -> None:

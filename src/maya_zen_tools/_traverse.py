@@ -12,7 +12,34 @@ from maya_zen_tools.errors import (
 )
 
 
-def get_expanded_vertices(vertices: set[str]) -> set[str]:
+def add_shared_vertex_edges(edges: set[str]) -> set[str]:
+    """
+    Given one or more edges, return these edges, plus all edges
+    sharing a vertex with the input edges.
+    """
+    return set(
+        cmds.ls(
+            *cmds.polyListComponentConversion(
+                *cmds.polyListComponentConversion(
+                    *edges, fromEdge=True, toVertex=True
+                ),
+                fromVertex=True,
+                toEdge=True,
+            ),
+            flatten=True,
+        )
+    )
+
+
+def get_shared_vertex_edges(edges: set[str]) -> set[str]:
+    """
+    Given one or more edges, return all edges
+    sharing a vertex with the input edges.
+    """
+    return add_shared_vertex_edges(edges) - edges
+
+
+def add_shared_edge_vertices(vertices: set[str]) -> set[str]:
     """
     Given one or more vertices, return these vertices, plus all vertices
     connected by an edge.
@@ -31,7 +58,7 @@ def get_expanded_vertices(vertices: set[str]) -> set[str]:
     )
 
 
-def get_expanded_uvs(uvs: set[str]) -> set[str]:
+def add_shared_edge_uvs(uvs: set[str]) -> set[str]:
     """
     Given one or more UVs, return these UVs, plus all UVs
     connected by an edge.
@@ -50,20 +77,20 @@ def get_expanded_uvs(uvs: set[str]) -> set[str]:
     )
 
 
-def get_bordering_vertices(vertices: set[str]) -> set[str]:
+def get_shared_edge_vertices(vertices: set[str]) -> set[str]:
     """
     Given one or more vertices, return all vertices connected to the
-    input vertices by an edge (excluded all input vertices).
+    input vertices by an edge.
     """
-    return get_expanded_vertices(vertices) - vertices
+    return add_shared_edge_vertices(vertices) - vertices
 
 
-def get_bordering_uvs(uvs: set[str]) -> set[str]:
+def get_shared_edge_uvs(uvs: set[str]) -> set[str]:
     """
-    Given one or more vertices, return all vertices connected to the
-    input vertices by an edge (excluded all input vertices).
+    Given one or more UVs, return all UVs connected to the
+    input UVs by an edge.
     """
-    return get_expanded_vertices(uvs) - uvs
+    return add_shared_edge_vertices(uvs) - uvs
 
 
 def iter_sort_vertices_by_distance(
@@ -81,7 +108,7 @@ def iter_sort_vertices_by_distance(
     bordering_vertices: set[str]
     matched_vertices: set[str]
     while other_vertices:
-        bordering_vertices = get_bordering_vertices(vertices)
+        bordering_vertices = get_shared_edge_vertices(vertices)
         if not bordering_vertices:
             # If there are no bordering vertices, any remaining vertices
             # must belong to a part of the mesh which cannot be reached
@@ -114,7 +141,7 @@ def iter_sort_uvs_by_distance(
     bordering_uvs: set[str]
     matched_uvs: set[str]
     while other_uvs:
-        bordering_uvs = get_bordering_uvs(uvs)
+        bordering_uvs = get_shared_edge_uvs(uvs)
         if not bordering_uvs:
             # If there are no bordering UVs, any remaining UVs
             # must belong to a part of the mesh which cannot be reached
@@ -164,7 +191,7 @@ def find_end_uv(uvs: Iterable[str]) -> str:
     return deque(iter_sort_uvs_by_distance(origin_uv, other_uvs), maxlen=1)[-1]
 
 
-def iter_sorted_edge_loop_vertices(vertices: Iterable[str]) -> Iterable[str]:
+def iter_sorted_vertices(vertices: Iterable[str]) -> Iterable[str]:
     """
     Given a set of vertices along an edge loop, yield the vertices in
     order from one end to the other (which end starts is not guaranteed, so
@@ -180,7 +207,7 @@ def iter_sorted_edge_loop_vertices(vertices: Iterable[str]) -> Iterable[str]:
     yield from iter_sort_vertices_by_distance(end_vertex, other_vertices)
 
 
-def iter_sorted_edge_loop_uvs(uvs: Iterable[str]) -> Iterable[str]:
+def iter_sorted_uvs(uvs: Iterable[str]) -> Iterable[str]:
     """
     Given a set of UVs along an edge loop, yield the UVs in
     order from one end to the other (which end starts is not guaranteed, so

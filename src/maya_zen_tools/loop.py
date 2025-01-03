@@ -13,10 +13,10 @@ from maya import cmds  # type: ignore
 from maya_zen_tools import options
 from maya_zen_tools._create import create_locator
 from maya_zen_tools._traverse import (
+    add_shared_edge_vertices,
     get_components_shape,
-    get_expanded_vertices,
     iter_selected_components,
-    iter_sorted_edge_loop_vertices,
+    iter_sorted_vertices,
 )
 from maya_zen_tools._ui import WINDOW
 from maya_zen_tools.errors import (
@@ -27,24 +27,6 @@ from maya_zen_tools.menu import (
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
     SELECT_EDGES_BETWEEN_VERTICES_LABEL,
 )
-
-DISTRIBUTION_TYPE_RADIO_BUTTON: str = "zenToolsDistributeTypeRadioButton"
-
-
-class DistributionType:
-    """
-    An enumeration of the different types of distribution that can be used
-    when creating a loop.
-
-    Attributes:
-        UNIFORM: Distribute vertices equidistant along the curve.
-        PROPORTIONAL: Distribute vertices such that edge lengths are
-            proportional to their original lengths in relation the sum
-            of all edge lengths.
-    """
-
-    UNIFORM: str = "UNIFORM"
-    PROPORTIONAL: str = "PROPORTIONAL"
 
 
 def _iter_shortest_vertex_path(
@@ -70,7 +52,7 @@ def _iter_shortest_vertex_path(
     ring_vertices: set[str]
     # Get a set of rings grown from the start vertex
     while end_vertex not in vertices:
-        expanded_vertices = get_expanded_vertices(vertices)
+        expanded_vertices = add_shared_edge_vertices(vertices)
         ring_vertices = expanded_vertices - vertices
         if not ring_vertices:
             # If we can't expand any further, and still haven't reached
@@ -84,7 +66,7 @@ def _iter_shortest_vertex_path(
         # Stop when we've reached the start vertex
         if start_vertex in vertices:
             break
-        expanded_vertices = get_expanded_vertices(vertices)
+        expanded_vertices = add_shared_edge_vertices(vertices)
         ring_vertices = expanded_vertices - vertices
         end_vertex_rings.append(ring_vertices)
         vertices = expanded_vertices
@@ -105,7 +87,7 @@ def _iter_shortest_vertex_path(
             if vertex:
                 # Intersect with only the vertices adjacent to the previously
                 # yielded vertex, to prevent hole-jumping
-                ring_intersection &= get_expanded_vertices({vertex})
+                ring_intersection &= add_shared_edge_vertices({vertex})
             warn(
                 (
                     "Multiple vertex paths possible between "
@@ -424,7 +406,7 @@ def _distribute_vertices_loop_along_curve(
     curve_shape: str,
     curve_transform: str,
     *,
-    distribution_type: str = DistributionType.UNIFORM,
+    distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
     sampling: int = 3,
 ) -> str:
@@ -449,7 +431,7 @@ def _distribute_vertices_loop_along_curve(
     """
     vertices_positions: tuple[tuple[str, float], ...] = tuple(
         _iter_shortest_vertices_path_proportionate_positions(selected_vertices)
-        if distribution_type == DistributionType.PROPORTIONAL
+        if distribution_type == options.DistributionType.PROPORTIONAL
         else _iter_shortest_vertices_path_uniform_positions(selected_vertices)
     )
     # Rebuild the curve to have a 0 to 1 parameter range
@@ -550,9 +532,7 @@ def select_edges_between_vertices(
     if not use_selection_order:
         # If we have opted not to use selection order, or are unable to because
         # it is not being tracked, we fall back to auomatic sorting
-        selected_vertices = tuple(
-            iter_sorted_edge_loop_vertices(selected_vertices)
-        )
+        selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
     edges: tuple[str, ...] = tuple(
         _iter_vertices_edges(_iter_shortest_vertices_path(selected_vertices))
     )
@@ -566,7 +546,7 @@ def select_edges_between_vertices(
 
 def curve_distribute_vertices(
     *selected_vertices: str,
-    distribution_type: str = DistributionType.UNIFORM,
+    distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
     use_selection_order: bool = False,
 ) -> tuple[str, ...]:
@@ -613,9 +593,7 @@ def curve_distribute_vertices(
     if not use_selection_order:
         # If we have opted not to use selection order, or are unable to because
         # it is not being tracked, we fall back to auomatic sorting
-        selected_vertices = tuple(
-            iter_sorted_edge_loop_vertices(selected_vertices)
-        )
+        selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
     # Create the Curve
     curve_transform: str
     curve_shape: str
@@ -672,11 +650,10 @@ def show_curve_distribute_vertices_options() -> None:
     with contextlib.suppress(ValueError):
         selected = ("UNIFORM", "PROPORTIONAL").index(
             get_option(  # type: ignore
-                "distribution_type", DistributionType.UNIFORM
+                "distribution_type", options.DistributionType.UNIFORM
             )
         ) + 1
     cmds.radioButtonGrp(
-        DISTRIBUTION_TYPE_RADIO_BUTTON,
         label="Distribution Type:",
         parent=column_layout,
         numberOfRadioButtons=2,

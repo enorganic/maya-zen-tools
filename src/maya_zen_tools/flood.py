@@ -5,9 +5,9 @@ from typing import Iterable
 from maya import cmds  # type: ignore
 
 from maya_zen_tools._traverse import (
-    get_bordering_vertices,
+    add_shared_edge_uvs,
     get_components_shape,
-    get_expanded_uvs,
+    get_shared_edge_vertices,
     iter_selected_components,
 )
 
@@ -38,7 +38,7 @@ def _iter_flood_select_vertices(
         # at the border, and once everything inside the border has been
         # added/yielded, `add_vertices` will be empty, thereby halting the
         # loop
-        add_vertices = get_bordering_vertices(vertices) - border_vertices
+        add_vertices = get_shared_edge_vertices(vertices) - border_vertices
         vertices |= add_vertices
     yield from border_vertices
 
@@ -99,7 +99,7 @@ def _iter_flood_select_uvs(
         # at the border, and once everything inside the border has been
         # added/yielded, `add_uvs` will be empty, thereby halting the
         # loop
-        add_uvs = get_expanded_uvs(uvs) - border_uvs
+        add_uvs = add_shared_edge_uvs(uvs) - border_uvs
         uvs |= add_uvs
     yield from border_uvs
 
