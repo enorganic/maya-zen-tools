@@ -121,6 +121,7 @@ def _iter_contiguous_edges(
                     origin_vertex, set(segment_terminal_vertices)
                 )
             )
+            print("!!!", sorted_segment_terminal_vertices)
             start_vertices_edges[sorted_segment_terminal_vertices[0]] = tuple(
                 edge_loop_segments[index]
                 if (
