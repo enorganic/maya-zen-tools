@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, timezone
 
 from maya import cmds  # type: ignore
@@ -23,6 +24,7 @@ LOFT_DISTRIBUTE_BETWEEN_EDGE_LOOPS_LABEL: str = (
     "Loft Distribute Between Edge Loops"
 )
 ABOUT_WINDOW: str = "zenToolsAboutWindow"
+CLOSE_CHECKBOX: str = "zenToolsCloseCheckBox"
 
 
 def show_about() -> None:
@@ -169,3 +171,17 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
+    with contextlib.suppress(Exception):
+        package_info: dict[str, str] = get_maya_zen_tools_package_info()
+        if package_info.get("editable_project_location") is not None:
+            # Only show these menu items if `maya-zen-tools` is an
+            # editable installation (indicating it is installed for
+            # development/testing)
+            cmds.menuItem(
+                label="Reload ZenTools",
+                command=(
+                    "from maya_zen_tools import _utilities\n"
+                    "_utilities.reload()"
+                ),
+                parent=MENU,
+            )

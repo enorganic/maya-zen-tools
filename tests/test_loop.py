@@ -19,7 +19,7 @@ from maya_zen_tools.options import DistributionType  # noqa: E402
 SCENE: Path = Path(__file__).absolute().parent / "scenes" / "test_loop.ma"
 
 
-def create_scene() -> bool:
+def create_scene() -> None:
     """
     This creates or opens a scene for testing `maya_zen_tools.loop`.
     Once created, this scene is retained in order to maintain a known
@@ -41,7 +41,6 @@ def create_scene() -> bool:
         )
         cmds.file(rename=str(SCENE))
         cmds.file(save=True, type="mayaAscii")
-        return True
     cmds.file(str(SCENE), open=True, force=True)
 
 
@@ -208,6 +207,150 @@ def test_curve_distribute_between_vertices_3() -> None:
         assert cmds.pointPosition(
             f"polyPlane.vtx[{vertex_id}]"
         ) != cmds.pointPosition(f"{poly_plane_2}.vtx[{vertex_id}]")
+
+
+def test_select_edges_between_vertices_closed() -> None:
+    """
+    This tests `maya_zen_tools.loop.select_edges_between_vertices` using
+    corner vertices for the selection.
+    """
+    create_scene()
+    selected_vertices: tuple[str, ...] = (
+        "polyPlane.vtx[118]",
+        "polyPlane.vtx[108]",
+        "polyPlane.vtx[0]",
+        "polyPlane.vtx[4]",
+        "polyPlane.vtx[24]",
+        "polyPlane.vtx[26]",
+        "polyPlane.vtx[5]",
+        "polyPlane.vtx[9]",
+    )
+    cmds.select(clear=True)
+    vertex: str
+    for vertex in selected_vertices:
+        cmds.select(vertex, add=True)
+    # Get a tuple of the vertices between
+    assert select_edges_between_vertices(
+        use_selection_order=True, close=True
+    ) == (
+        "polyPlane.e[213]",
+        "polyPlane.e[212]",
+        "polyPlane.e[211]",
+        "polyPlane.e[210]",
+        "polyPlane.e[209]",
+        "polyPlane.e[208]",
+        "polyPlane.e[207]",
+        "polyPlane.e[206]",
+        "polyPlane.e[205]",
+        "polyPlane.e[204]",
+        "polyPlane.e[184]",
+        "polyPlane.e[163]",
+        "polyPlane.e[142]",
+        "polyPlane.e[121]",
+        "polyPlane.e[100]",
+        "polyPlane.e[79]",
+        "polyPlane.e[58]",
+        "polyPlane.e[37]",
+        "polyPlane.e[19]",
+        "polyPlane.e[1]",
+        "polyPlane.e[0]",
+        "polyPlane.e[2]",
+        "polyPlane.e[4]",
+        "polyPlane.e[6]",
+        "polyPlane.e[8]",
+        "polyPlane.e[26]",
+        "polyPlane.e[44]",
+        "polyPlane.e[46]",
+        "polyPlane.e[28]",
+        "polyPlane.e[10]",
+        "polyPlane.e[9]",
+        "polyPlane.e[11]",
+        "polyPlane.e[13]",
+        "polyPlane.e[15]",
+        "polyPlane.e[17]",
+        "polyPlane.e[35]",
+        "polyPlane.e[56]",
+        "polyPlane.e[77]",
+        "polyPlane.e[98]",
+        "polyPlane.e[119]",
+        "polyPlane.e[140]",
+        "polyPlane.e[161]",
+        "polyPlane.e[182]",
+        "polyPlane.e[203]",
+    )
+
+
+def test_curve_distribute_between_vertices_closed() -> None:
+    """
+    This tests `maya_zen_tools.loop.curve_distribute_vertices` by creating
+    a closed curve from the corner vertices, and distributing border
+    vertices along the curve.
+    """
+    create_scene()
+    selected_vertices: tuple[str, ...] = (
+        "polyPlane.vtx[118]",
+        "polyPlane.vtx[108]",
+        "polyPlane.vtx[0]",
+        "polyPlane.vtx[4]",
+        "polyPlane.vtx[24]",
+        "polyPlane.vtx[26]",
+        "polyPlane.vtx[5]",
+        "polyPlane.vtx[9]",
+    )
+    intermediate_vertices: tuple[str, ...] = (
+        "polyPlane.vtx[6]",
+        "polyPlane.vtx[115]",
+        "polyPlane.vtx[97]",
+        "polyPlane.vtx[96]",
+        "polyPlane.vtx[25]",
+        "polyPlane.vtx[2]",
+        "polyPlane.vtx[15]",
+        "polyPlane.vtx[74]",
+        "polyPlane.vtx[111]",
+        "polyPlane.vtx[41]",
+        "polyPlane.vtx[112]",
+        "polyPlane.vtx[116]",
+        "polyPlane.vtx[52]",
+        "polyPlane.vtx[42]",
+        "polyPlane.vtx[7]",
+        "polyPlane.vtx[3]",
+        "polyPlane.vtx[113]",
+        "polyPlane.vtx[86]",
+        "polyPlane.vtx[19]",
+        "polyPlane.vtx[30]",
+        "polyPlane.vtx[31]",
+        "polyPlane.vtx[14]",
+        "polyPlane.vtx[117]",
+        "polyPlane.vtx[75]",
+        "polyPlane.vtx[1]",
+        "polyPlane.vtx[114]",
+        "polyPlane.vtx[10]",
+        "polyPlane.vtx[109]",
+        "polyPlane.vtx[110]",
+        "polyPlane.vtx[64]",
+        "polyPlane.vtx[63]",
+        "polyPlane.vtx[20]",
+        "polyPlane.vtx[107]",
+        "polyPlane.vtx[85]",
+        "polyPlane.vtx[8]",
+        "polyPlane.vtx[53]",
+    )
+    cmds.select(clear=True)
+    point_positions: tuple[tuple[float, float, float], ...] = tuple(
+        cmds.pointPosition(vertex) for vertex in intermediate_vertices
+    )
+    vertex: str
+    for vertex in selected_vertices:
+        cmds.select(vertex, add=True)
+    curve_distribute_vertices(
+        use_selection_order=True,
+        distribution_type=DistributionType.UNIFORM,
+        close=True,
+    )
+    # Verify that intermediate vertices have moved
+    index: int
+    for index, vertex in enumerate(intermediate_vertices):
+        assert cmds.pointPosition(vertex) != point_positions[index]
 
 
 if __name__ == "__main__":

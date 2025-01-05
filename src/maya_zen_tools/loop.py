@@ -24,6 +24,7 @@ from maya_zen_tools.errors import (
     NonContiguousMeshSelectionError,
 )
 from maya_zen_tools.menu import (
+    CLOSE_CHECKBOX,
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
     SELECT_EDGES_BETWEEN_VERTICES_LABEL,
 )
@@ -102,7 +103,7 @@ def _iter_shortest_vertex_path(
 
 def _iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
     """
-    Given two vertices, yield the vertices forming the shortest
+    Given two or more vertices, yield the vertices forming the shortest
     path between them.
 
     Parameters:
@@ -260,7 +261,10 @@ def _get_vertices_locator_scale(vertices: Sequence[str]) -> float:
 
 
 def _create_curve_from_vertices(
-    vertices: Sequence[str], *, create_locators: bool = False
+    vertices: Sequence[str],
+    *,
+    create_locators: bool = False,
+    close: bool = False,
 ) -> tuple[str, ...]:
     """
     Given a selection of vertices along a shared edge loop, create a curve
@@ -273,6 +277,7 @@ def _create_curve_from_vertices(
     Parameters:
         vertices: A list of vertices to create the curve from.
         create_locators: If `True`, create locators for manipulating the curve.
+        close: If `True`, the curve will form a closed loop.
     """
     transform: str = cmds.createNode(
         "transform", name="zenLoopCurve#", skipSelect=True
@@ -287,7 +292,7 @@ def _create_curve_from_vertices(
     index: int
     translation: tuple[float, float, float]
     locators: list[str] = []
-    if len(vertices) == 3:  # noqa: PLR2004
+    if len(vertices) == 3 and not close:  # noqa: PLR2004
         arc: str = cmds.createNode("makeThreePointCircularArc")
         for index, vertex in enumerate(vertices, 1):
             translation = cmds.xform(
@@ -312,6 +317,8 @@ def _create_curve_from_vertices(
         curve_from_surface_iso: str = cmds.createNode("curveFromSurfaceIso")
         cmds.setAttr(f"{curve_from_surface_iso}.isoparmDirection", 0)
         cmds.setAttr(f"{loft}.uniform", 0)
+        if close:
+            cmds.setAttr(f"{loft}.close", 1)
         for index, vertex in enumerate(vertices, 0):
             translation = cmds.xform(
                 vertex, query=True, worldSpace=True, translation=True
@@ -505,6 +512,7 @@ def _distribute_vertices_loop_along_curve(
 def select_edges_between_vertices(
     *selected_vertices: str,
     use_selection_order: bool = False,
+    close: bool = False,
 ) -> tuple[str, ...]:
     """
     Add the edges forming the shortest path between selected vertices to
@@ -513,6 +521,8 @@ def select_edges_between_vertices(
     Parameters:
         use_selection_order: If `True`, the edge path will follow the selection
             order, if two or more vertices are selected.
+        close: If `True`, the vertices between the last and first selected
+            vertex will be included.
 
     Returns:
         A tuple of the selected edges.
@@ -534,7 +544,13 @@ def select_edges_between_vertices(
         # it is not being tracked, we fall back to auomatic sorting
         selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
     edges: tuple[str, ...] = tuple(
-        _iter_vertices_edges(_iter_shortest_vertices_path(selected_vertices))
+        _iter_vertices_edges(
+            _iter_shortest_vertices_path(
+                (*selected_vertices, selected_vertices[0])
+                if close
+                else selected_vertices
+            )
+        )
     )
     # Select edges
     cmds.select(*edges, add=True)
@@ -549,6 +565,7 @@ def curve_distribute_vertices(
     distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
     use_selection_order: bool = False,
+    close: bool = False,
 ) -> tuple[str, ...]:
     """
     Create a curve passing between selected vertices and distribute all
@@ -568,6 +585,8 @@ def curve_distribute_vertices(
         create_deformer: If `True`, create a deformer.
         use_selection_order: If `True`, the curve will be created in selection
             order, otherwise, it will be automatically sorted.
+        close: If `True`, the curve distribution will form a closed loop, with
+            the first selected vertex also being the last.
 
     Returns:
         A tuple of the affected vertices.
@@ -599,11 +618,15 @@ def curve_distribute_vertices(
     curve_shape: str
     locators: list[str]
     curve_transform, curve_shape, *locators = _create_curve_from_vertices(
-        selected_vertices, create_locators=create_deformer
+        selected_vertices, create_locators=create_deformer, close=close
     )
     # Distribute Vertices Along the Curve
     curve_shape = _distribute_vertices_loop_along_curve(
-        selected_vertices,
+        (
+            (*selected_vertices, selected_vertices[0])
+            if close
+            else selected_vertices
+        ),
         curve_shape,
         curve_transform,
         distribution_type=distribution_type,
@@ -676,21 +699,28 @@ def show_curve_distribute_vertices_options() -> None:
         height=30,
     )
     cmds.separator(parent=column_layout)
+    use_selection_order: bool = get_option(  # type: ignore
+        "use_selection_order", True
+    )
     cmds.checkBox(
         label="Use Selection Order",
         parent=column_layout,
-        value=get_option("use_selection_order", True),  # type: ignore
+        value=use_selection_order,  # type: ignore
         onCommand=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
             "'curve_distribute_vertices', 'use_selection_order', "
-            "True)"
+            "True)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=False)"
         ),
         offCommand=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
             "'curve_distribute_vertices', 'use_selection_order', "
-            "False)"
+            "False)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=True)"
         ),
         height=30,
     )
@@ -713,6 +743,28 @@ def show_curve_distribute_vertices_options() -> None:
         ),
         height=30,
     )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
+        CLOSE_CHECKBOX,
+        label="Close",
+        parent=column_layout,
+        value=get_option("close", False),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_vertices', 'close', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_vertices', 'close', "
+            "False)"
+        ),
+        height=30,
+    )
+    if not use_selection_order:
+        cmds.disable(CLOSE_CHECKBOX, value=True)
     cmds.button(
         label="Distribute",
         parent=column_layout,
@@ -758,24 +810,53 @@ def show_select_edges_between_vertices_options() -> None:
     column_layout: str = cmds.columnLayout(
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
     )
+    use_selection_order: bool = get_option(  # type: ignore
+        "use_selection_order", True
+    )
     cmds.checkBox(
         label="Use Selection Order",
         parent=column_layout,
-        value=get_option("use_selection_order", True),  # type: ignore
+        value=use_selection_order,
         onCommand=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
             "'select_edges_between_vertices', 'use_selection_order', "
-            "True)"
+            "True)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=False)"
         ),
         offCommand=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
             "'select_edges_between_vertices', 'use_selection_order', "
+            "False)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=True)"
+        ),
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
+        CLOSE_CHECKBOX,
+        label="Close",
+        parent=column_layout,
+        value=get_option("close", False),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_vertices', 'close', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_vertices', 'close', "
             "False)"
         ),
         height=30,
     )
+    if not use_selection_order:
+        cmds.disable(CLOSE_CHECKBOX, value=True)
     cmds.button(
         label="Select",
         parent=column_layout,

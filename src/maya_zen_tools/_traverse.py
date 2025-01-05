@@ -107,20 +107,21 @@ def iter_sort_vertices_by_distance(
     vertices: set[str] = {origin_vertex}
     bordering_vertices: set[str]
     matched_vertices: set[str]
-    while other_vertices:
+    unsorted_vertices: set[str] = set(other_vertices) - {origin_vertex}
+    while unsorted_vertices:
         bordering_vertices = get_shared_edge_vertices(vertices)
         if not bordering_vertices:
             # If there are no bordering vertices, any remaining vertices
             # must belong to a part of the mesh which cannot be reached
             # by edge traversal, and is therefore disconnected
             raise NonContiguousMeshSelectionError(
-                set(origin_vertex) | other_vertices
+                origin_vertex, other_vertices
             )
-        matched_vertices = bordering_vertices & other_vertices
+        matched_vertices = bordering_vertices & unsorted_vertices
         if matched_vertices:
             yield from matched_vertices
-            other_vertices -= matched_vertices
-            if not other_vertices:
+            unsorted_vertices -= matched_vertices
+            if not unsorted_vertices:
                 return
         # Add the bordering vertices to our traversal selection
         vertices |= bordering_vertices

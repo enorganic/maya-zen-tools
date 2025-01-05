@@ -68,7 +68,7 @@ def _get_contiguous_edges_terminal_vertices(
     )
 
 
-def _iter_contiguous_edges(
+def _iter_contiguous_edges(  # noqa: C901
     *selected_edges: str,
 ) -> Iterable[tuple[str, ...]]:
     """
@@ -86,26 +86,58 @@ def _iter_contiguous_edges(
     while edges:
         edge: str = edges.pop()
         adjacent_edges: set[str] = set(get_shared_vertex_edges({edge}))
-        found: bool = False
-        for edge_loop_segment in edge_loop_segments:
+        # This is a list of edge loop segment indices where the edge could be
+        # appended. Since two segments could be matched for the same edge,
+        # we need to retain this as a list.
+        found: int | None = None
+        index: int
+        for index, edge_loop_segment in enumerate(edge_loop_segments):
+            if not edge_loop_segment:
+                continue
             if edge_loop_segment[0] in adjacent_edges:
                 # This edge is adjacent to the first edge in the segment
-                edge_loop_segment.insert(0, edge)
-                found = True
-                break
+                if found is None:
+                    edge_loop_segment.insert(0, edge)
+                    found = index
+                    # Keep looking to see if there is a second match
+                    continue
+                else:
+                    if edge == edge_loop_segments[found][-1]:
+                        edge_loop_segments[found].extend(edge_loop_segment)
+                    else:
+                        edge_loop_segments[found] = (
+                            list(reversed(edge_loop_segment))
+                            + edge_loop_segments[found]
+                        )
+                    edge_loop_segment.clear()
+                    break
             if edge_loop_segment[-1] in adjacent_edges:
                 # This edge is adjacent to the last edge in the segment
-                edge_loop_segment.append(edge)
-                found = True
-                break
-        if not found:
+                if found is None:
+                    edge_loop_segment.append(edge)
+                    found = index
+                    # Keep looking to see if there is a second match
+                    continue
+                else:
+                    if edge == edge_loop_segments[found][-1]:
+                        edge_loop_segments[found].extend(
+                            reversed(edge_loop_segment)
+                        )
+                    else:
+                        edge_loop_segments[found] = (
+                            list(edge_loop_segment) + edge_loop_segments[found]
+                        )
+                    edge_loop_segment.clear()
+                    break
+        if found is None:
             # This edge is not adjacent to any segments started thus far
             edge_loop_segments.append([edge])
+    # Remove the cleared segments (they've been joined with another)
+    edge_loop_segments = list(filter(None, edge_loop_segments))
     # Get the start and end vertices for each segment
     origin_vertex: str | None = None
     segment_terminal_vertices: tuple[str, ...]
     start_vertices_edges: dict[str, tuple[str, ...]] = {}
-    index: int
     for index, segment_terminal_vertices in enumerate(
         map(_get_contiguous_edges_terminal_vertices, edge_loop_segments)
     ):
@@ -121,7 +153,6 @@ def _iter_contiguous_edges(
                     origin_vertex, set(segment_terminal_vertices)
                 )
             )
-            print("!!!", sorted_segment_terminal_vertices)
             start_vertices_edges[sorted_segment_terminal_vertices[0]] = tuple(
                 edge_loop_segments[index]
                 if (
