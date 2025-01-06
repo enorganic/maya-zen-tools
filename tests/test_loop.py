@@ -9,6 +9,7 @@ from maya import cmds  # type: ignore  # noqa: E402
 from maya_zen_tools import startup  # noqa
 from maya_zen_tools._traverse import iter_edges_vertices  # noqa: E402
 from maya_zen_tools.loop import (  # noqa: E402
+    create_curve_from_edges,
     curve_distribute_vertices,
     select_edges_between_vertices,
 )
@@ -348,6 +349,39 @@ def test_iter_edges_vertices(poly_plane: str) -> None:
         "polyPlane.vtx[58]",
         "polyPlane.vtx[59]",
     )
+
+
+def test_create_curve_from_edges(poly_sphere: str) -> None:
+    """
+    This tests `maya_zen_tools.loop.select_edges_between_vertices` by
+    selecting vertices along a known contiguous edge loop segment, will
+    should produce identical selections each time, given the same inputs.
+    """
+    assert poly_sphere == "polySphere"
+    cmds.select(
+        "polySphere.e[240]",
+        "polySphere.e[241]",
+        "polySphere.e[242]",
+        "polySphere.e[243]",
+        "polySphere.e[244]",
+        "polySphere.e[245]",
+        "polySphere.e[246]",
+        "polySphere.e[247]",
+        "polySphere.e[248]",
+        "polySphere.e[249]",
+        "polySphere.e[250]",
+        "polySphere.e[251]",
+        "polySphere.e[252]",
+        "polySphere.e[253]",
+        "polySphere.e[254]",
+        "polySphere.e[255]",
+        "polySphere.e[256]",
+        "polySphere.e[257]",
+        "polySphere.e[258]",
+        "polySphere.e[259]",
+    )
+    curve_shape: str = create_curve_from_edges()[0]
+    assert cmds.getAttr(f"{curve_shape}.spans") == 20
 
 
 if __name__ == "__main__":

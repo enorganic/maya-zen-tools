@@ -611,7 +611,7 @@ def curve_distribute_vertices(
     return selected_vertices
 
 
-def create_curve_from_edges(*selected_edges: str) -> None:
+def create_curve_from_edges(*selected_edges: str) -> tuple[str, str]:
     selected_edges = tuple(
         iter_sorted_contiguous_edges(
             selected_edges or iter_selected_components("e")
@@ -623,6 +623,7 @@ def create_curve_from_edges(*selected_edges: str) -> None:
         "nurbsCurve", parent=curve_transform, name=f"{curve_transform}Shape"
     )
     cmds.connectAttr(f"{rebuild_curve}.outputCurve", f"{curve_shape}.create")
+    return curve_shape, curve_transform
 
 
 def show_curve_distribute_vertices_options() -> None:

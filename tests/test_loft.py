@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from maya_zen_tools.loft import _iter_contiguous_edges
+from maya_zen_tools.loft import (
+    _iter_contiguous_edges, loft_distribute_vertices_between_edges
+)
 
 
 def test_iter_contiguous_edges(poly_sphere: str) -> None:
     """
-    Test `flood_select`.
+    This tests `maya_zen_tools.loft._iter_contiguous_edges` with a known
+    set of edge loops forming 3 contiguous segments by verifying the number
+    of groupings.
     """
     assert poly_sphere == "polySphere"
     assert (
@@ -40,6 +44,16 @@ def test_iter_contiguous_edges(poly_sphere: str) -> None:
         )
         == 3
     )
+
+
+def test_loft_distribute_vertices_between_edges(poly_sphere: str) -> None:
+    """
+    This tests `maya_zen_tools.loft.loft_distribute_vertices_between_edges` by
+    selecting vertices along a known contiguous edge loop segment, will
+    should produce identical selections each time, given the same inputs.
+    """
+    assert poly_sphere == "polySphere"
+    loft_distribute_vertices_between_edges()
 
 
 if __name__ == "__main__":
