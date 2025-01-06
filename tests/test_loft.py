@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from maya_zen_tools.loft import (
-    _iter_contiguous_edges, loft_distribute_vertices_between_edges
+    _iter_contiguous_edges,
+    loft_distribute_vertices_between_edges,
 )
 
 
@@ -49,8 +50,8 @@ def test_iter_contiguous_edges(poly_sphere: str) -> None:
 def test_loft_distribute_vertices_between_edges(poly_sphere: str) -> None:
     """
     This tests `maya_zen_tools.loft.loft_distribute_vertices_between_edges` by
-    selecting vertices along a known contiguous edge loop segment, will
-    should produce identical selections each time, given the same inputs.
+    moving some vertices, then selecting vertices along known contiguous edge
+    loop segments and executing the loft.
     """
     assert poly_sphere == "polySphere"
     loft_distribute_vertices_between_edges()
