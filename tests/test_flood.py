@@ -10,17 +10,11 @@ from maya_zen_tools import startup  # noqa
 from maya_zen_tools.flood import flood_select  # noqa: E402
 
 
-def test_flood_select() -> None:
+def test_flood_select(poly_cylinder: str) -> None:
     """
     Test `flood_select`.
     """
-    cmds.select(clear=True)
-    poly_cylinder: str = cmds.polyCylinder(
-        subdivisionsX=20,
-        subdivisionsY=20,
-        subdivisionsZ=2,
-        constructionHistory=False,
-    )[0]
+    assert poly_cylinder == "polyCylinder"
     cmds.select(
         f"{poly_cylinder}.e[240:259]", f"{poly_cylinder}.f[460]", add=True
     )
@@ -250,4 +244,4 @@ def test_flood_select() -> None:
 
 
 if __name__ == "__main__":
-    pytest.main(["-vv", __file__])
+    pytest.main(["-s", "-vv", __file__])

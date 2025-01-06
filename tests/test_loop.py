@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import maya.standalone  # type: ignore
 import pytest
 
@@ -17,41 +14,14 @@ from maya_zen_tools.loop import (  # noqa: E402
 )
 from maya_zen_tools.options import DistributionType  # noqa: E402
 
-SCENE: Path = Path(__file__).absolute().parent / "scenes" / "test_loop.ma"
 
-
-def create_scene() -> None:
-    """
-    This creates or opens a scene for testing `maya_zen_tools.loop`.
-    Once created, this scene is retained in order to maintain a known
-    pattern of vertex IDs. If the scene is deleted, this function will recreate
-    it, but all vertex IDs will need to be checked, and most will need
-    replaced. The face IDs below may also need to be adjusted.
-    """
-    if not SCENE.is_file():
-        os.makedirs(str(SCENE.absolute().parent), exist_ok=True)
-        cmds.polyPlane(
-            name="polyPlane",
-            subdivisionsX=10,
-            subdivisionsY=10,
-            constructionHistory=False,
-        )[0]
-        cmds.delete(
-            "polyPlane.f[4:5]",
-            "polyPlane.f[14:15]",
-        )
-        cmds.file(rename=str(SCENE))
-        cmds.file(save=True, type="mayaAscii")
-    cmds.file(str(SCENE), open=True, force=True)
-
-
-def test_select_edges_between_vertices() -> None:
+def test_select_edges_between_vertices(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.select_edges_between_vertices` by
     selecting vertices along a known contiguous edge loop segment, will
     should produce identical selections each time, given the same inputs.
     """
-    create_scene()
+    assert poly_plane == "polyPlane"
     assert cmds.selectPref(trackSelectionOrder=True, query=True)
     cmds.select(clear=True)
     cmds.select("polyPlane.vtx[20]")
@@ -114,7 +84,7 @@ def test_select_edges_between_vertices() -> None:
     ]
 
 
-def test_curve_distribute_between_vertices_4() -> None:
+def test_curve_distribute_between_vertices_4(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.curve_distribute_vertices` by moving two
     vertices along an edge loop, then selecting those two vertices as well as
@@ -122,6 +92,7 @@ def test_curve_distribute_between_vertices_4() -> None:
     selection, in the order we want the curve to progress. The plane is also
     duplicated in order to compare distribution types.
     """
+    assert poly_plane == "polyPlane"
     poly_plane_2: str = cmds.duplicate("polyPlane")[0]
     cmds.move(0, 0.3, 0, "polyPlane.vtx[61]", relative=True)
     cmds.move(0, 0.4, 0, "polyPlane.vtx[56]", relative=True)
@@ -160,7 +131,7 @@ def test_curve_distribute_between_vertices_4() -> None:
         ) != cmds.pointPosition(f"{poly_plane_2}.vtx[{vertex_id}]"), vertex_id
 
 
-def test_curve_distribute_between_vertices_3() -> None:
+def test_curve_distribute_between_vertices_3(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.curve_distribute_vertices` by moving one
     vertex along an edge loop, then selecting that vertex as well as
@@ -170,7 +141,7 @@ def test_curve_distribute_between_vertices_3() -> None:
     vertex selection specifically because the curve created for 3 vertices
     uses an arc node rather than a loft.
     """
-    create_scene()
+    assert poly_plane == "polyPlane"
     cmds.move(0, 0.3, 0, "polyPlane.vtx[59]", relative=True)
     selection: tuple[str, ...] = (
         "polyPlane.vtx[63]",
@@ -210,12 +181,12 @@ def test_curve_distribute_between_vertices_3() -> None:
         ) != cmds.pointPosition(f"{poly_plane_2}.vtx[{vertex_id}]")
 
 
-def test_select_edges_between_vertices_closed() -> None:
+def test_select_edges_between_vertices_closed(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.select_edges_between_vertices` using
     corner vertices for the selection.
     """
-    create_scene()
+    assert poly_plane == "polyPlane"
     selected_vertices: tuple[str, ...] = (
         "polyPlane.vtx[118]",
         "polyPlane.vtx[108]",
@@ -281,13 +252,13 @@ def test_select_edges_between_vertices_closed() -> None:
     )
 
 
-def test_curve_distribute_between_vertices_closed() -> None:
+def test_curve_distribute_between_vertices_closed(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.curve_distribute_vertices` by creating
     a closed curve from the corner vertices, and distributing border
     vertices along the curve.
     """
-    create_scene()
+    assert poly_plane == "polyPlane"
     selected_vertices: tuple[str, ...] = (
         "polyPlane.vtx[118]",
         "polyPlane.vtx[108]",
@@ -354,11 +325,11 @@ def test_curve_distribute_between_vertices_closed() -> None:
         assert cmds.pointPosition(vertex) != point_positions[index]
 
 
-def test_iter_edges_vertices() -> None:
+def test_iter_edges_vertices(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools._traverse.iter_edges_vertices`
     """
-    create_scene()
+    assert poly_plane == "polyPlane"
     assert tuple(
         iter_edges_vertices(
             (
