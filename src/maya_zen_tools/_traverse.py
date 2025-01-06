@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Iterable, Sequence
+from itertools import islice
+from typing import Iterable, Sequence, cast
+from warnings import warn
 
 from maya import cmds  # type: ignore
 
 from maya_zen_tools.errors import (
     InvalidSelectionError,
+    MultipleVertexPathsPossibleWarning,
     NonContiguousMeshSelectionError,
     TooManyShapesError,
 )
@@ -427,3 +430,184 @@ def iter_edges_vertices(edges: Iterable[str]) -> Iterable[str]:
         else:
             previous_vertices = vertices
     yield from (previous_vertices or ())
+
+
+def iter_shortest_vertex_path(
+    start_vertex: str, end_vertex: str
+) -> Iterable[str]:
+    """
+    Get the shortest vertex path by intersecting expanding rings of vertices.
+    This produces a more predictable/consistent result than the polySelect
+    command with the shortestEdgePath option.
+
+    Parameters:
+        start_vertex: The vertex at the start of the path.
+        end_vertex: The vertex at the end of the path.
+    """
+    start_vertex_rings: list[set[str]] = [{start_vertex}]
+    end_vertex_rings: list[set[str]] = [{end_vertex}]
+    # Getting the component shape is primarily done
+    # in order to raise an error if the vertices are not on the same shape,
+    # but is also used when raising an error.
+    shape: str = get_components_shape((start_vertex, end_vertex))
+    vertices: set[str] = {start_vertex}
+    expanded_vertices: set[str]
+    ring_vertices: set[str]
+    # Get a set of rings grown from the start vertex
+    while end_vertex not in vertices:
+        expanded_vertices = add_shared_edge_vertices(vertices)
+        ring_vertices = expanded_vertices - vertices
+        if not ring_vertices:
+            # If we can't expand any further, and still haven't reached
+            # the end vertex, it's not a contiguous mesh
+            raise NonContiguousMeshSelectionError(shape)
+        start_vertex_rings.append(ring_vertices)
+        vertices = expanded_vertices
+    vertices = {end_vertex}
+    # Get a set of rings grown from the end vertex
+    while start_vertex not in vertices:
+        # Stop when we've reached the start vertex
+        if start_vertex in vertices:
+            break
+        expanded_vertices = add_shared_edge_vertices(vertices)
+        ring_vertices = expanded_vertices - vertices
+        end_vertex_rings.append(ring_vertices)
+        vertices = expanded_vertices
+    # We should now have two sets of vertex rings of equal length
+    start_vertex_ring: set[str]
+    end_vertex_ring: set[str]
+    vertex: str = ""
+    for start_vertex_ring, end_vertex_ring in zip(
+        start_vertex_rings, reversed(end_vertex_rings)
+    ):
+        ring_intersection: set[str] = start_vertex_ring & end_vertex_ring
+        if len(ring_intersection) > 1:
+            # There will typically be only one intersecting vertex, the
+            # exception being for a mesh with interior holes coinciding with
+            # our vertex path, in which case we need to narrow our traversal
+            # to only select vertices on one side of the hole (which side is
+            # selected at random, by necessity)
+            if vertex:
+                # Intersect with only the vertices adjacent to the previously
+                # yielded vertex, to prevent hole-jumping
+                ring_intersection &= add_shared_edge_vertices({vertex})
+            warn(
+                (
+                    "Multiple vertex paths possible between "
+                    f"{start_vertex} and {end_vertex}"
+                ),
+                category=MultipleVertexPathsPossibleWarning,
+                stacklevel=2,
+            )
+        vertex = ring_intersection.pop()
+        yield vertex
+
+
+def iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
+    """
+    Given two or more vertices, yield the vertices forming the shortest
+    path between them.
+
+    Parameters:
+        vertices: Two or more vertices.
+    """
+    vertices = iter(vertices)
+    try:
+        start_vertex: str = next(vertices)
+    except StopIteration:
+        return
+    is_first: bool = True
+    end_vertex: str
+    for end_vertex in vertices:
+        segment_vertices: Iterable[str] = iter_shortest_vertex_path(
+            start_vertex,
+            end_vertex,
+        )
+        yield from (
+            segment_vertices
+            if is_first
+            # Skip the first vertex for segments after the first
+            else islice(segment_vertices, 1, None)
+        )
+        start_vertex = end_vertex
+        is_first = False
+
+
+def iter_shortest_vertices_path_proportional_positions(
+    selected_vertices: Iterable[str],
+) -> Iterable[tuple[str, float]]:
+    """
+    Given two or more vertices, yield the vertices forming the shortest
+    path between them, along with a number from 0-1 indicating where on the
+    path each vertex should be positioned for proportional distribution.
+
+    Parameters:
+        vertices: Two or more vertices.
+
+    Yields:
+        A tuple containing the vertex name and a number from 0-1 indicating
+        where on the path the vertex should be positioned.
+    """
+    vertices: list[str] = []
+    edge_lengths: list[float] = []
+    previous_vertex: str = ""
+    vertex: str
+    edge_length: float
+    selected_vertices = tuple(selected_vertices)
+    spans: int = len(selected_vertices) - 1
+    for vertex in iter_shortest_vertices_path(selected_vertices):
+        vertices.append(vertex)
+        if previous_vertex:
+            edge: str = cmds.polyListComponentConversion(
+                previous_vertex,
+                vertex,
+                fromVertex=True,
+                toEdge=True,
+                internal=True,
+            )[0]
+            edge_length = cmds.arclen(edge)
+            if not edge_length:
+                raise ValueError(edge)
+            edge_lengths.append(
+                # The length of the preceding edge
+                edge_length
+            )
+        else:
+            edge_lengths.append(0)
+        previous_vertex = vertex
+    total_edge_length: float = sum(edge_lengths)
+    traversed_edge_length: float = 0.0
+    for vertex, edge_length in zip(vertices, edge_lengths):
+        traversed_edge_length += edge_length
+        yield vertex, spans * (traversed_edge_length / total_edge_length)
+
+
+def iter_shortest_vertices_path_uniform_positions(
+    selected_vertices: Iterable[str],
+) -> Iterable[tuple[str, float]]:
+    """
+    Given two or more vertices, yield the vertices forming the shortest
+    path between them, along with a number from 0-1 indicating where on the
+    path each vertex should be positioned for uniform distribution.
+
+    Parameters:
+        vertices: Two or more vertices.
+
+    Yields:
+        A tuple containing the vertex name and a number from 0-1 indicating
+        where on the path the vertex should be positioned.
+    """
+    vertices: tuple[str, ...] = tuple(
+        cast(
+            Iterable[str],
+            iter_shortest_vertices_path(selected_vertices),
+        )
+    )
+    index: int
+    length: int = len(vertices)
+    selected_vertices = tuple(selected_vertices)
+    spans: int = len(selected_vertices) - 1
+    for index, vertex in enumerate(
+        vertices,
+    ):
+        yield vertex, (index / length) * spans

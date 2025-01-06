@@ -14,6 +14,8 @@ from maya_zen_tools._traverse import (
     get_shared_vertex_edges,
     iter_edges_vertices,
     iter_selected_components,
+    iter_shortest_vertices_path_proportional_positions,
+    iter_shortest_vertices_path_uniform_positions,
     iter_sort_vertices_by_distance,
     iter_sorted_vertices,
     iter_vertices_edges,
@@ -310,11 +312,60 @@ def _iter_contiguous_edges(  # noqa: C901
     yield from filter(None, edge_loop_segments)
 
 
+def _rebuild_surface_distribute_vertices_between_edges(
+    rebuild_surface: str,
+    edge_loops: tuple[tuple[str, ...], ...],
+    distribution_type: str = options.DistributionType.UNIFORM,
+) -> set[str]:
+    """
+    Given a rebuildSurface node and one or more edge loops, distribute all
+    vertices between the edge loops along the surface, and return the
+    vertices as a set.
+    """
+    point_on_surface_info: str = cmds.createNode("pointOnSurfaceInfo")
+    cmds.connectAttr(
+        f"{rebuild_surface}.outputSurface",
+        f"{point_on_surface_info}.inputSurface",
+    )
+    edges: tuple[str, ...]
+    vertex_loops: tuple[tuple[str, ...], ...] = tuple(
+        tuple(iter_edges_vertices(edges)) for edges in edge_loops
+    )
+    progress_window: str = cmds.progressWindow(
+        maxValue=len(vertex_loops[0]),
+    )
+    v_position: float
+    selected_vertices: tuple[str, ...]
+    vertices: set[str] = set()
+    for v_position, selected_vertices in enumerate(zip(*vertex_loops)):
+        cmds.setAttr(f"{point_on_surface_info}.parameterV", v_position)
+        u_position: float
+        vertex: str
+        for vertex, u_position in (
+            iter_shortest_vertices_path_proportional_positions(
+                selected_vertices
+            )
+            if distribution_type == options.DistributionType.PROPORTIONAL
+            else iter_shortest_vertices_path_uniform_positions(
+                selected_vertices
+            )
+        ):
+            cmds.setAttr(f"{point_on_surface_info}.parameterU", u_position)
+            position: tuple[float, float, float] = cmds.getAttr(
+                f"{point_on_surface_info}.position"
+            )[0]
+            cmds.move(*position, vertex, absolute=True, worldSpace=True)
+            vertices.add(vertex)
+        cmds.progressWindow(progress_window, progress=v_position)
+    cmds.progressWindow(progress_window, endProgress=True)
+    return vertices
+
+
 def loft_distribute_vertices_between_edges(
     *selected_edges: str,
-    distribution_type: str = options.DistributionType.UNIFORM,  # noqa: ARG001
-    create_deformer: bool = False,  # noqa: ARG001
-) -> tuple[str, str, str]:
+    distribution_type: str = options.DistributionType.UNIFORM,
+    create_deformer: bool = False,
+) -> tuple[str, ...]:
     """
     Given a selection of edge loop segments, aligned parallel to one
     another on a polygon mesh, distribute the vertices sandwiched between
@@ -324,7 +375,7 @@ def loft_distribute_vertices_between_edges(
     edge_loops: tuple[tuple[str, ...], ...] = tuple(
         _iter_aligned_contiguous_edges(*selected_edges)
     )
-    # progress_window: str = cmds.progressWindow(maxValue=len(edge_loops[0]))
+    cmds.waitCursor(state=True)
     index: int
     edge_loop: tuple[str, ...]
     loft: str = cmds.createNode("loft", name="loftBetweenEdges#")
@@ -333,14 +384,6 @@ def loft_distribute_vertices_between_edges(
         cmds.connectAttr(
             f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
         )
-    surface_transform: str = cmds.createNode(
-        "transform", name="loftBetweenEdgesSurface#"
-    )
-    surface_shape: str = cmds.createNode(
-        "nurbsSurface",
-        name=f"{surface_transform}Shape",
-        parent=surface_transform,
-    )
     rebuild_surface: str = cmds.createNode(
         "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
     )
@@ -348,27 +391,44 @@ def loft_distribute_vertices_between_edges(
         f"{loft}.outputSurface",
         f"{rebuild_surface}.inputSurface",
     )
-    # This connection is temporary
-    cmds.connectAttr(
-        f"{loft}.outputSurface",
-        f"{surface_shape}.create",
-    )
-    cmds.setAttr(
-        f"{rebuild_surface}.spansU", cmds.getAttr(f"{surface_shape}.spansU")
-    )
-    cmds.setAttr(
-        f"{rebuild_surface}.spansV", cmds.getAttr(f"{surface_shape}.spansV")
-    )
+    cmds.setAttr(f"{rebuild_surface}.spansU", len(edge_loops) - 1)
+    cmds.setAttr(f"{rebuild_surface}.spansV", len(edge_loops[0]))
     cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
     cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
     cmds.setAttr(f"{rebuild_surface}.direction", 0)
-    cmds.connectAttr(
-        f"{rebuild_surface}.outputSurface",
-        f"{surface_shape}.create",
-        force=True,
+    vertices: set[str] = _rebuild_surface_distribute_vertices_between_edges(
+        rebuild_surface=rebuild_surface,
+        edge_loops=edge_loops,
+        distribution_type=distribution_type,
     )
-    # cmds.progressWindow(progress_window, endProgress=True)
-    return (surface_transform, surface_shape, rebuild_surface)
+    if create_deformer:
+        surface_transform: str = cmds.createNode(
+            "transform", name="loftBetweenEdgesSurface#"
+        )
+        surface_shape: str = cmds.createNode(
+            "nurbsSurface",
+            name=f"{surface_transform}Shape",
+            parent=surface_transform,
+        )
+        cmds.connectAttr(
+            f"{loft}.outputSurface",
+            f"{surface_shape}.create",
+        )
+        cmds.connectAttr(
+            f"{rebuild_surface}.outputSurface",
+            f"{surface_shape}.create",
+            force=True,
+        )
+        cmds.delete(surface_shape, constructionHistory=True)
+        wrap: str = cmds.proximityWrap(
+            vertices,
+        )
+        cmds.proximityWrap(wrap, edit=True, addDrivers=[surface_shape])
+        cmds.waitCursor(state=False)
+        return (surface_shape, surface_transform, wrap)
+    cmds.delete(rebuild_surface)
+    cmds.waitCursor(state=False)
+    return ()
 
 
 def show_loft_distribute_vertices_between_edges_options() -> None:
