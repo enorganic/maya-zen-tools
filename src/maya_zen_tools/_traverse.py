@@ -158,12 +158,13 @@ def iter_sort_uvs_by_distance(
         uvs |= bordering_uvs
 
 
-def find_end_vertex(vertices: Iterable[str]) -> str:
+def find_end_vertex(vertices: Iterable[str], origin_vertex: str = "") -> str:
     """
     Given a selection of vertices, find *one* of the end vertices
     """
     other_vertices: set[str] = set(vertices)
-    origin_vertex: str = other_vertices.pop()
+    if not origin_vertex:
+        origin_vertex = other_vertices.pop()
     if len(other_vertices) == 1:
         # If there are fewer than 3 vertices, either will be an end vertex
         return other_vertices.pop()
@@ -190,6 +191,80 @@ def find_end_uv(uvs: Iterable[str]) -> str:
     # Given any UV on an edge loop, the most distant UV will
     # always be one of the end UVs
     return deque(iter_sort_uvs_by_distance(origin_uv, other_uvs), maxlen=1)[-1]
+
+
+def iter_sorted_contiguous_vertices(vertices: Iterable[str]) -> Iterable[str]:
+    """
+    Given a set of vertices along an edge loop, yield the vertices in
+    order from one end to the other (which end starts is not guaranteed, so
+    this should only be used where the direction does not matter).
+
+    Note: This works with closed loops, whereas `iter_sorted_vertices`
+    does not.
+
+    Parameters:
+        vertices: A sequence of vertices along an edge loop.
+    """
+    vertices = set(vertices)
+    vertex: str = find_end_vertex(vertices)
+    vertices.remove(vertex)
+    yield vertex
+    while vertices:
+        vertex = (get_shared_edge_vertices({vertex}) & vertices).pop()
+        vertices.remove(vertex)
+        yield vertex
+
+
+def iter_sorted_contiguous_edges(edges: Iterable[str]) -> Iterable[str]:
+    """
+    Given a set of contiguous edges, yield the edges in
+    order from one end to the other (which end starts is not guaranteed, so
+    this should only be used where the direction does not matter).
+
+    Note: This works with closed loops, whereas `iter_sorted_edges`
+    does not.
+
+    Parameters:
+        edges: Two or more contiguous edges
+    """
+    edges = set(edges)
+    edge: str
+    for edge in iter_vertices_edges(
+        iter_sorted_contiguous_vertices(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    *edges, fromEdge=True, toVertex=True
+                ),
+                flatten=True,
+            )
+        )
+    ):
+        yield edge
+        edges.remove(edge)
+    # If the edges formed a closed loop, there will be one more remaining
+    yield from edges
+
+
+def iter_sorted_contiguous_uvs(uvs: Iterable[str]) -> Iterable[str]:
+    """
+    Given a set of contiguous UVs along an edge loop, yield the UVs in
+    order from one end to the other (which end starts is not guaranteed, so
+    this should only be used where the direction does not matter).
+
+    Note: This works with closed loops, whereas `iter_sorted_uvs`
+    does not.
+
+    Parameters:
+        uvs: A sequence of UVs along an edge loop.
+    """
+    uvs = set(uvs)
+    uv: str = find_end_vertex(uvs)
+    uvs.remove(uv)
+    yield uv
+    while uvs:
+        uv = (get_shared_edge_uvs({uv}) & uvs).pop()
+        uvs.remove(uv)
+        yield uv
 
 
 def iter_sorted_vertices(vertices: Iterable[str]) -> Iterable[str]:
@@ -285,3 +360,70 @@ def iter_selected_components(
         component_type = component.rpartition("[")[0]
         if component_type and (component_type in component_types_):
             yield selected
+
+
+def iter_uvs_edges(uvs: Iterable[str]) -> Iterable[str]:
+    """
+    Yield the edges between a series of ordered UVs, in the same
+    order as the UVs
+    """
+    uvs = iter(uvs)
+    try:
+        start_uv: str = next(uvs)
+    except StopIteration:
+        return
+    end_uv: str
+    for end_uv in uvs:
+        yield cmds.polyListComponentConversion(
+            start_uv, end_uv, fromUV=True, toEdge=True, internal=True
+        )
+
+
+def iter_vertices_edges(vertices: Iterable[str]) -> Iterable[str]:
+    """
+    Yield the edges between a series of ordered vertices, in the same
+    order as the vertices
+    """
+    vertices = iter(vertices)
+    try:
+        start_vertex: str = next(vertices)
+    except StopIteration:
+        return
+    end_vertex: str
+    for end_vertex in vertices:
+        yield from cmds.polyListComponentConversion(
+            start_vertex,
+            end_vertex,
+            fromVertex=True,
+            toEdge=True,
+            internal=True,
+        )
+        start_vertex = end_vertex
+
+
+def iter_edges_vertices(edges: Iterable[str]) -> Iterable[str]:
+    """
+    Yield the vertices between a series of ordered edges, in the same
+    order as the edges
+    """
+    edges = iter(edges)
+    previous_vertices: set[str] | None = None
+    edge: str
+    for edge in edges:
+        vertices: set[str] = set(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    edge,
+                    fromEdge=True,
+                    toVertex=True,
+                ),
+                flatten=True,
+            )
+        )
+        if previous_vertices is not None:
+            yield from previous_vertices - vertices
+            yield from previous_vertices & vertices
+            previous_vertices = vertices - previous_vertices
+        else:
+            previous_vertices = vertices
+    yield from (previous_vertices or ())

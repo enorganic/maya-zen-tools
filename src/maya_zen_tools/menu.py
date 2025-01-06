@@ -20,9 +20,10 @@ FLOOD_SELECT_LABEL: str = "Flood Select"
 CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
     "Curve Distribute Between Vertices"
 )
-LOFT_DISTRIBUTE_BETWEEN_EDGE_LOOPS_LABEL: str = (
-    "Loft Distribute Between Edge Loops"
+LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
+    "Loft Distribute Vertices Between Edges"
 )
+CREATE_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges"
 ABOUT_WINDOW: str = "zenToolsAboutWindow"
 CLOSE_CHECKBOX: str = "zenToolsCloseCheckBox"
 
@@ -138,10 +139,19 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
-        label=LOFT_DISTRIBUTE_BETWEEN_EDGE_LOOPS_LABEL,
+        label=CREATE_CURVE_FROM_EDGES_LABEL,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.create_curve_from_edges()"
+        ),
+        annotation="Create a curve from a contiguous edge selection.",
+        parent=MENU,
+    )
+    cmds.menuItem(
+        label=LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL,
         command=(
             "from maya_zen_tools import loft\n"
-            "loft.do_loft_distribute_between_edges()"
+            "loft.do_loft_distribute_vertices_between_edges()"
         ),
         annotation=(
             "Distribute vertices between two or more parallel edge loops."
@@ -152,7 +162,7 @@ def create_menu() -> None:
         optionBox=True,
         command=(
             "from maya_zen_tools import loft;"
-            "loft.show_loft_distribute_between_edges_options()"
+            "loft.show_loft_distribute_vertices_between_edges_options()"
         ),
         parent=MENU,
     )

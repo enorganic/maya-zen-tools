@@ -11,12 +11,14 @@ from warnings import warn
 from maya import cmds  # type: ignore
 
 from maya_zen_tools import options
-from maya_zen_tools._create import create_locator
+from maya_zen_tools._create import create_edges_rebuild_curve, create_locator
 from maya_zen_tools._traverse import (
     add_shared_edge_vertices,
     get_components_shape,
     iter_selected_components,
+    iter_sorted_contiguous_edges,
     iter_sorted_vertices,
+    iter_vertices_edges,
 )
 from maya_zen_tools._ui import WINDOW
 from maya_zen_tools.errors import (
@@ -129,45 +131,6 @@ def _iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
         )
         start_vertex = end_vertex
         is_first = False
-
-
-def _iter_vertices_edges(vertices: Iterable[str]) -> Iterable[str]:
-    """
-    Yield the edges between a series of ordered vertices, in the same
-    order as the vertices
-    """
-    vertices = iter(vertices)
-    try:
-        start_vertex: str = next(vertices)
-    except StopIteration:
-        return
-    end_vertex: str
-    for end_vertex in vertices:
-        yield from cmds.polyListComponentConversion(
-            start_vertex,
-            end_vertex,
-            fromVertex=True,
-            toEdge=True,
-            internal=True,
-        )
-        start_vertex = end_vertex
-
-
-def _iter_uvs_edges(uvs: Iterable[str]) -> Iterable[str]:
-    """
-    Yield the edges between a series of ordered UVs, in the same
-    order as the UVs
-    """
-    uvs = iter(uvs)
-    try:
-        start_uv: str = next(uvs)
-    except StopIteration:
-        return
-    end_uv: str
-    for end_uv in uvs:
-        yield cmds.polyListComponentConversion(
-            start_uv, end_uv, fromUV=True, toEdge=True, internal=True
-        )
 
 
 def _iter_shortest_vertices_path_proportionate_positions(
@@ -544,7 +507,7 @@ def select_edges_between_vertices(
         # it is not being tracked, we fall back to auomatic sorting
         selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
     edges: tuple[str, ...] = tuple(
-        _iter_vertices_edges(
+        iter_vertices_edges(
             _iter_shortest_vertices_path(
                 (*selected_vertices, selected_vertices[0])
                 if close
@@ -646,6 +609,20 @@ def curve_distribute_vertices(
     cmds.select(locators[ceil(len(locators) / 2)])
     cmds.waitCursor(state=False)
     return selected_vertices
+
+
+def create_curve_from_edges(*selected_edges: str) -> None:
+    selected_edges = tuple(
+        iter_sorted_contiguous_edges(
+            selected_edges or iter_selected_components("e")
+        )
+    )
+    rebuild_curve: str = create_edges_rebuild_curve(selected_edges)
+    curve_transform: str = cmds.createNode("transform", name="curveFromEdges#")
+    curve_shape: str = cmds.createNode(
+        "nurbsCurve", parent=curve_transform, name=f"{curve_transform}Shape"
+    )
+    cmds.connectAttr(f"{rebuild_curve}.outputCurve", f"{curve_shape}.create")
 
 
 def show_curve_distribute_vertices_options() -> None:

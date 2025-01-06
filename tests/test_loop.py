@@ -10,6 +10,7 @@ maya.standalone.initialize(name="python")
 from maya import cmds  # type: ignore  # noqa: E402
 
 from maya_zen_tools import startup  # noqa
+from maya_zen_tools._traverse import iter_edges_vertices  # noqa: E402
 from maya_zen_tools.loop import (  # noqa: E402
     curve_distribute_vertices,
     select_edges_between_vertices,
@@ -351,6 +352,31 @@ def test_curve_distribute_between_vertices_closed() -> None:
     index: int
     for index, vertex in enumerate(intermediate_vertices):
         assert cmds.pointPosition(vertex) != point_positions[index]
+
+
+def test_iter_edges_vertices() -> None:
+    """
+    This tests `maya_zen_tools._traverse.iter_edges_vertices`
+    """
+    create_scene()
+    assert tuple(
+        iter_edges_vertices(
+            (
+                "polyPlane.e[101]",
+                "polyPlane.e[103]",
+                "polyPlane.e[105]",
+                "polyPlane.e[107]",
+                "polyPlane.e[109]",
+            )
+        )
+    ) == (
+        "polyPlane.vtx[54]",
+        "polyPlane.vtx[55]",
+        "polyPlane.vtx[56]",
+        "polyPlane.vtx[57]",
+        "polyPlane.vtx[58]",
+        "polyPlane.vtx[59]",
+    )
 
 
 if __name__ == "__main__":
