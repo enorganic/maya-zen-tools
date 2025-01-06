@@ -79,7 +79,7 @@ requirements:
 # Test & check linting/formatting (for local use only)
 test:
 	{ hatch --version || pipx install --upgrade hatch || python3 -m pip install --upgrade hatch ; } && \
-	hatch fmt --check && hatch run mypy && mayapy -m pytest -s -vv
+	hatch fmt --check && hatch run mypy && mayapy -m pytest -s -vv -p no:faulthandler
 
 format:
 	hatch fmt --formatter && \
