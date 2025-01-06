@@ -359,7 +359,7 @@ def loft_distribute_vertices_between_edges(
     cmds.setAttr(
         f"{rebuild_surface}.spansV", cmds.getAttr(f"{surface_shape}.spansV")
     )
-    cmds.setAttr(f"{rebuild_surface}.keepRange", 0)
+    cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
     cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
     cmds.setAttr(f"{rebuild_surface}.direction", 0)
     cmds.connectAttr(

@@ -133,7 +133,7 @@ def _iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
         is_first = False
 
 
-def _iter_shortest_vertices_path_proportionate_positions(
+def _iter_shortest_vertices_path_proportional_positions(
     selected_vertices: Iterable[str],
 ) -> Iterable[tuple[str, float]]:
     """
@@ -175,9 +175,10 @@ def _iter_shortest_vertices_path_proportionate_positions(
         previous_vertex = vertex
     total_edge_length: float = sum(edge_lengths)
     traversed_edge_length: float = 0.0
+    spans: int = len(vertices) - 1
     for vertex, edge_length in zip(vertices, edge_lengths):
         traversed_edge_length += edge_length
-        yield vertex, traversed_edge_length / total_edge_length
+        yield vertex, spans * (traversed_edge_length / total_edge_length)
 
 
 def _iter_shortest_vertices_path_uniform_positions(
@@ -201,12 +202,11 @@ def _iter_shortest_vertices_path_uniform_positions(
             _iter_shortest_vertices_path(selected_vertices),
         )
     )
-    length: int = len(vertices) - 1
     index: int
     for index, vertex in enumerate(
         vertices,
     ):
-        yield vertex, index / length
+        yield vertex, index
 
 
 def _get_vertices_locator_scale(vertices: Sequence[str]) -> float:
@@ -378,7 +378,6 @@ def _distribute_vertices_loop_along_curve(
     *,
     distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
-    sampling: int = 3,
 ) -> str:
     """
     Distribute vertices along a curve.
@@ -400,7 +399,7 @@ def _distribute_vertices_loop_along_curve(
         the same as the the input curve shape.
     """
     vertices_positions: tuple[tuple[str, float], ...] = tuple(
-        _iter_shortest_vertices_path_proportionate_positions(selected_vertices)
+        _iter_shortest_vertices_path_proportional_positions(selected_vertices)
         if distribution_type == options.DistributionType.PROPORTIONAL
         else _iter_shortest_vertices_path_uniform_positions(selected_vertices)
     )
@@ -408,15 +407,13 @@ def _distribute_vertices_loop_along_curve(
     rebuild_curve: str = cmds.createNode("rebuildCurve")
     cmds.connectAttr(f"{curve_shape}.local", f"{rebuild_curve}.inputCurve")
     cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
-    cmds.setAttr(
-        f"{rebuild_curve}.spans", (len(vertices_positions)) * sampling
-    )
+    cmds.setAttr(f"{rebuild_curve}.spans", len(vertices_positions) - 1)
     cmds.setAttr(
         f"{rebuild_curve}.degree", cmds.getAttr(f"{curve_shape}.degree")
     )
     cmds.setAttr(f"{rebuild_curve}.keepTangents", 1)
     cmds.setAttr(f"{rebuild_curve}.keepEndPoints", 1)
-    cmds.setAttr(f"{rebuild_curve}.keepRange", 0)
+    cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
     # This point-on-curve info node will slide along the curve to get
     # transform values for the vertices
     point_on_curve_info: str = cmds.createNode("pointOnCurveInfo")

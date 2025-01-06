@@ -16,10 +16,19 @@ class DistributionType:
         PROPORTIONAL: Distribute vertices such that edge lengths are
             proportional to their original lengths in relation the sum
             of all edge lengths.
+        UNIFORM_SPANS: Distribute vertices equidistant along each span
+            of the curve or lofted surface, maintaining the positions of the
+            originally selected vertices or edges.
+        PROPORTIONAL_SPANS: Distribute vertices such that edge lengths are
+            proportional to their original lengths in relation the sum
+            of all edge lengths in their curve or surface span, maintaining the
+            positions of the originally selected vertices or edges.
     """
 
     UNIFORM: str = "UNIFORM"
     PROPORTIONAL: str = "PROPORTIONAL"
+    UNIFORM_SPANS: str = "UNIFORM_SPANS"
+    PROPORTIONAL_SPANS: str = "PROPORTIONAL_SPANS"
 
 
 OPTIONS_PATH: Path = Path(cmds.internalVar(userPrefDir=True)) / "ZenTools.json"
