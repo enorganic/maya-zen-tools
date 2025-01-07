@@ -197,7 +197,7 @@ def _distribute_vertices_loop_along_curve(
     *,
     distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
-) -> str:
+) -> tuple[str, tuple[str, ...]]:
     """
     Distribute vertices along a curve.
 
@@ -214,8 +214,10 @@ def _distribute_vertices_loop_along_curve(
         sampling: Curve sampling
 
     Returns:
-        The curve shape name. If a deformer is created, this will not be
-        the same as the the input curve shape.
+        A tuple with two items:
+        -   The curve shape name. If a deformer is created, this will not be
+            the same as the the input curve shape.
+        -   A tuple of the vertices distributed, in order
     """
     vertices_positions: tuple[tuple[str, float], ...] = tuple(
         iter_shortest_vertices_path_proportional_positions(selected_vertices)
@@ -285,9 +287,9 @@ def _distribute_vertices_loop_along_curve(
             f'"{rebuild_curve}.outputCurve", "{rebuilt_curve}.create"'
             ")"
         )
-        return rebuilt_curve
+        return rebuilt_curve, tuple(map(itemgetter(0), vertices_positions))
     cmds.delete(rebuild_curve)
-    return curve_shape
+    return curve_shape, tuple(map(itemgetter(0), vertices_positions))
 
 
 def select_edges_between_vertices(
@@ -370,7 +372,8 @@ def curve_distribute_vertices(
             the first selected vertex also being the last.
 
     Returns:
-        A tuple of the affected vertices.
+        A tuple of the affected edges (the same as the end state selection if
+        `create_deformer == False`).
     """
     cmds.waitCursor(state=True)
     if use_selection_order:
@@ -379,14 +382,10 @@ def curve_distribute_vertices(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
-    # This is the original selection, which will be restored after the command
-    # is executed, unless a deformer is created, in which case the deformer
-    # will be selected
-    selection: tuple[str] = tuple(cmds.ls(orderedSelection=True, flatten=True))
     # If vertices are not explicitly passed, we get them by
     # flattening the current selection of vertices
     selected_vertices = selected_vertices or tuple(
-        iter_selected_components("vtx", selection=selection)
+        iter_selected_components("vtx")
     )
     # Raise an error if selected vertices span more than one mesh
     get_components_shape(selected_vertices)
@@ -402,7 +401,8 @@ def curve_distribute_vertices(
         selected_vertices, create_locators=create_deformer, close=close
     )
     # Distribute Vertices Along the Curve
-    curve_shape = _distribute_vertices_loop_along_curve(
+    vertices: tuple[str, ...]
+    curve_shape, vertices = _distribute_vertices_loop_along_curve(
         (
             (*selected_vertices, selected_vertices[0])
             if close
@@ -413,20 +413,21 @@ def curve_distribute_vertices(
         distribution_type=distribution_type,
         create_deformer=create_deformer,
     )
+    edges: tuple[str, ...] = tuple(iter_vertices_edges(vertices))
     if not create_deformer:
         # Cleanup the curve and history if not needed for creating a deformer
         cmds.delete(curve_shape, constructionHistory=True)
         cmds.delete(curve_transform, constructionHistory=True)
         cmds.delete(curve_transform)
-        cmds.select(selection)
-        return selected_vertices
+        cmds.select(*edges)
+        return edges
     # Go into object selection mode, in order to manipulate locators
     cmds.selectMode(object=True)
     # Select a center locator, if there are more than two, otherwise select
     # an end locator
     cmds.select(locators[ceil(len(locators) / 2)])
     cmds.waitCursor(state=False)
-    return selected_vertices
+    return edges
 
 
 def create_curve_from_edges(*selected_edges: str) -> tuple[str, str]:

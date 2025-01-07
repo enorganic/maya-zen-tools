@@ -182,6 +182,24 @@ def test_curve_distribute_between_vertices_3(poly_plane: str) -> None:
         ) != cmds.pointPosition(f"{poly_plane_2}.vtx[{vertex_id}]")
 
 
+def test_edges_between_vertices_sphere(poly_sphere: str) -> None:
+    assert poly_sphere == "polySphere"
+    assert select_edges_between_vertices(
+        "polySphere.vtx[353]",
+        "polySphere.vtx[357]",
+        "polySphere.vtx[341]",
+    ) == (
+        "polySphere.e[353]",
+        "polySphere.e[354]",
+        "polySphere.e[355]",
+        "polySphere.e[356]",
+        "polySphere.e[357]",
+        "polySphere.e[358]",
+        "polySphere.e[359]",
+        "polySphere.e[340]",
+    )
+
+
 def test_select_edges_between_vertices_closed(poly_plane: str) -> None:
     """
     This tests `maya_zen_tools.loop.select_edges_between_vertices` using

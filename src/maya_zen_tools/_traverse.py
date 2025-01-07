@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from collections import deque
+from functools import cache
 from itertools import islice
+from math import sqrt
 from typing import Iterable, Sequence, cast
-from warnings import warn
 
 from maya import cmds  # type: ignore
 
 from maya_zen_tools.errors import (
     InvalidSelectionError,
-    MultipleVertexPathsPossibleWarning,
     NonContiguousMeshSelectionError,
     TooManyShapesError,
 )
@@ -432,23 +432,74 @@ def iter_edges_vertices(edges: Iterable[str]) -> Iterable[str]:
     yield from (previous_vertices or ())
 
 
+def get_distance_between(
+    position_a: tuple[float, float, float],
+    position_b: tuple[float, float, float],
+    *args: tuple[float, float, float],
+) -> float:
+    """
+    Get the (total) distance between two or more coordinates
+    """
+    a: float
+    b: float
+    distance: float = sqrt(
+        sum(abs(a - b) ** 2 for a, b in zip(position_a, position_b))
+    )
+    if args:
+        return distance + get_distance_between(position_b, *args)
+    return distance
+
+
+def get_least_deviant_midpoint_vertex(
+    start_point_position: tuple[float, float, float],
+    end_point_position: tuple[float, float, float],
+    midpoint_vertices: Iterable[str],
+) -> str:
+    """
+    Get the verktex with coordinates which deviate least from the line
+    connecting a start and end point position.
+    """
+    least_deviant_vertex: str = ""
+    least_deviant_length: float = 0.0
+    vertex: str
+    for vertex in midpoint_vertices:
+        length: float = get_distance_between(
+            start_point_position,
+            cmds.pointPosition(vertex),
+            end_point_position,
+        )
+        if (not least_deviant_vertex) or (length < least_deviant_length):
+            least_deviant_length = length
+            least_deviant_vertex = vertex
+    return least_deviant_vertex
+
+
 def iter_shortest_vertex_path(
     start_vertex: str, end_vertex: str
 ) -> Iterable[str]:
     """
-    Get the shortest vertex path by intersecting expanding rings of vertices.
-    This produces a more predictable/consistent result than the polySelect
-    command with the shortestEdgePath option.
+    Get a the vertex path connected by the fewest possible number of edges by
+    intersecting expanding rings of vertices from either end.
 
     Parameters:
         start_vertex: The vertex at the start of the path.
         end_vertex: The vertex at the end of the path.
     """
+
+    @cache
+    def get_start_point_position() -> tuple[float, float, float]:
+        return tuple(cmds.pointPosition(start_vertex))
+
+    @cache
+    def get_end_point_position() -> tuple[float, float, float]:
+        return tuple(cmds.pointPosition(end_vertex))
+
     start_vertex_rings: list[set[str]] = [{start_vertex}]
     end_vertex_rings: list[set[str]] = [{end_vertex}]
-    # Getting the component shape is primarily done
+    # Getting the component shape is done early
     # in order to raise an error if the vertices are not on the same shape,
-    # but is also used when raising an error.
+    # but is also used when raising an error, and for use with the polySelect
+    # command
     shape: str = get_components_shape((start_vertex, end_vertex))
     vertices: set[str] = {start_vertex}
     expanded_vertices: set[str]
@@ -481,25 +532,24 @@ def iter_shortest_vertex_path(
         start_vertex_rings, reversed(end_vertex_rings)
     ):
         ring_intersection: set[str] = start_vertex_ring & end_vertex_ring
+        # There will typically be only one intersecting vertex, however
+        # when there is more than one shortest (having the least edges)
+        # path between the vertices, we need to make sure that the path
+        # we choose is contiguous. When multiple contiguous options for
+        # traversal exist, we choose the one which is most nearly aligned
+        # with the vector between the start and end vertices.
+        if vertex and len(ring_intersection) > 1:
+            # Intersect with only the vertices adjacent to the previously
+            # yielded vertex
+            ring_intersection &= add_shared_edge_vertices({vertex})
         if len(ring_intersection) > 1:
-            # There will typically be only one intersecting vertex, the
-            # exception being for a mesh with interior holes coinciding with
-            # our vertex path, in which case we need to narrow our traversal
-            # to only select vertices on one side of the hole (which side is
-            # selected at random, by necessity)
-            if vertex:
-                # Intersect with only the vertices adjacent to the previously
-                # yielded vertex, to prevent hole-jumping
-                ring_intersection &= add_shared_edge_vertices({vertex})
-            warn(
-                (
-                    "Multiple vertex paths possible between "
-                    f"{start_vertex} and {end_vertex}"
-                ),
-                category=MultipleVertexPathsPossibleWarning,
-                stacklevel=2,
+            vertex = get_least_deviant_midpoint_vertex(
+                get_start_point_position(),
+                get_end_point_position(),
+                ring_intersection,
             )
-        vertex = ring_intersection.pop()
+        else:
+            vertex = ring_intersection.pop()
         yield vertex
 
 
@@ -604,10 +654,10 @@ def iter_shortest_vertices_path_uniform_positions(
         )
     )
     index: int
-    length: int = len(vertices)
+    edge_length: int = len(vertices) - 1
     selected_vertices = tuple(selected_vertices)
     spans: int = len(selected_vertices) - 1
     for index, vertex in enumerate(
         vertices,
     ):
-        yield vertex, (index / length) * spans
+        yield vertex, (index / edge_length) * spans

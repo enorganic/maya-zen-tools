@@ -365,7 +365,7 @@ def loft_distribute_vertices_between_edges(
     *selected_edges: str,
     distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
-) -> tuple[str, ...]:
+) -> tuple[tuple[str, ...]] | tuple[tuple[str, ...], str, str, str]:
     """
     Given a selection of edge loop segments, aligned parallel to one
     another on a polygon mesh, distribute the vertices sandwiched between
@@ -401,6 +401,14 @@ def loft_distribute_vertices_between_edges(
         edge_loops=edge_loops,
         distribution_type=distribution_type,
     )
+    faces: tuple[str, ...] = tuple(
+        cmds.ls(
+            *cmds.polyListComponentConversion(
+                *vertices, fromVertex=True, toFace=True, internal=True
+            ),
+            flatten=True,
+        )
+    )
     if create_deformer:
         surface_transform: str = cmds.createNode(
             "transform", name="loftBetweenEdgesSurface#"
@@ -425,10 +433,11 @@ def loft_distribute_vertices_between_edges(
         )
         cmds.proximityWrap(wrap, edit=True, addDrivers=[surface_shape])
         cmds.waitCursor(state=False)
-        return (surface_shape, surface_transform, wrap)
+        return (faces, surface_shape, surface_transform, wrap)
     cmds.delete(rebuild_surface)
     cmds.waitCursor(state=False)
-    return ()
+    cmds.select(*faces)
+    return (faces,)
 
 
 def show_loft_distribute_vertices_between_edges_options() -> None:
