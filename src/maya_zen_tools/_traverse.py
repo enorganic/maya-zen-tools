@@ -4,7 +4,7 @@ from collections import deque
 from functools import cache
 from itertools import islice
 from math import sqrt
-from typing import Iterable, Sequence, cast
+from typing import Iterable, Sequence
 
 from maya import cmds  # type: ignore
 
@@ -583,38 +583,39 @@ def iter_shortest_vertices_path(vertices: Iterable[str]) -> Iterable[str]:
         is_first = False
 
 
-def iter_shortest_vertices_path_proportional_positions(
-    selected_vertices: Iterable[str],
+def iter_vertices_path_proportional_positions(
+    vertices: Iterable[str], spans: int = 1
 ) -> Iterable[tuple[str, float]]:
     """
-    Given two or more vertices, yield the vertices forming the shortest
-    path between them, along with a number from 0-1 indicating where on the
-    path each vertex should be positioned for proportional distribution.
+    Given two or more adjacent vertices, yield tuples with each vertex and a
+    number from 0 to `spans` indicating where on the path each vertex should
+    be positioned for proportional distribution.
 
     Parameters:
         vertices: Two or more vertices.
 
     Yields:
-        A tuple containing the vertex name and a number from 0-1 indicating
-        where on the path the vertex should be positioned.
+        A tuple containing the vertex name and a number from 0-`spans`
+        indicating where on the curve or surface the vertex should be
+        positioned.
     """
-    vertices: list[str] = []
+    vertices = vertices if isinstance(vertices, tuple) else tuple(vertices)
     edge_lengths: list[float] = []
     previous_vertex: str = ""
     vertex: str
     edge_length: float
-    selected_vertices = tuple(selected_vertices)
-    spans: int = len(selected_vertices) - 1
-    for vertex in iter_shortest_vertices_path(selected_vertices):
-        vertices.append(vertex)
+    for vertex in vertices:
         if previous_vertex:
-            edge: str = cmds.polyListComponentConversion(
-                previous_vertex,
-                vertex,
-                fromVertex=True,
-                toEdge=True,
-                internal=True,
-            )[0]
+            try:
+                edge: str = cmds.polyListComponentConversion(
+                    previous_vertex,
+                    vertex,
+                    fromVertex=True,
+                    toEdge=True,
+                    internal=True,
+                )[0]
+            except IndexError as error:
+                raise InvalidSelectionError(vertices) from error
             edge_length = cmds.arclen(edge)
             if not edge_length:
                 raise ValueError(edge)
@@ -632,6 +633,53 @@ def iter_shortest_vertices_path_proportional_positions(
         yield vertex, spans * (traversed_edge_length / total_edge_length)
 
 
+def iter_shortest_vertices_path_proportional_positions(
+    selected_vertices: Iterable[str],
+) -> Iterable[tuple[str, float]]:
+    """
+    Given two or more vertices, yield the vertices forming the shortest
+    path between them, along with a number from 0-1 indicating where on the
+    path each vertex should be positioned for proportional distribution.
+
+    Parameters:
+        vertices: Two or more vertices.
+
+    Yields:
+        A tuple containing the vertex name and a number from 0-1 indicating
+        where on the path the vertex should be positioned.
+    """
+    selected_vertices = tuple(selected_vertices)
+    yield from iter_vertices_path_proportional_positions(
+        iter_shortest_vertices_path(selected_vertices),
+        spans=len(selected_vertices) - 1,
+    )
+
+
+def iter_vertices_path_uniform_positions(
+    vertices: Iterable[str], spans: int = 1
+) -> Iterable[tuple[str, float]]:
+    """
+    Given two or more adjacent vertices, yield each along with a number
+    from 0-`spans` indicating where on the curve or surface each vertex should
+    be positioned for uniform distribution.
+
+    Parameters:
+        vertices: Two or more vertices.
+
+    Yields:
+        A tuple containing the vertex name and a number from 0-`spans`
+        indicating where on the curve or surface the vertex should be
+        positioned.
+    """
+    vertices = vertices if isinstance(vertices, tuple) else tuple(vertices)
+    index: int
+    edge_length: int = len(vertices) - 1
+    for index, vertex in enumerate(
+        vertices,
+    ):
+        yield vertex, (index / edge_length) * spans
+
+
 def iter_shortest_vertices_path_uniform_positions(
     selected_vertices: Iterable[str],
 ) -> Iterable[tuple[str, float]]:
@@ -647,17 +695,8 @@ def iter_shortest_vertices_path_uniform_positions(
         A tuple containing the vertex name and a number from 0-1 indicating
         where on the path the vertex should be positioned.
     """
-    vertices: tuple[str, ...] = tuple(
-        cast(
-            Iterable[str],
-            iter_shortest_vertices_path(selected_vertices),
-        )
-    )
-    index: int
-    edge_length: int = len(vertices) - 1
     selected_vertices = tuple(selected_vertices)
-    spans: int = len(selected_vertices) - 1
-    for index, vertex in enumerate(
-        vertices,
-    ):
-        yield vertex, (index / edge_length) * spans
+    yield from iter_vertices_path_uniform_positions(
+        iter_shortest_vertices_path(selected_vertices),
+        spans=len(selected_vertices) - 1,
+    )

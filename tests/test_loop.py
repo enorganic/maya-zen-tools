@@ -105,8 +105,19 @@ def test_curve_distribute_between_vertices_4(poly_plane: str) -> None:
     )
     cmds.select(*selection)
     curve_distribute_vertices(use_selection_order=True)
-    # Check to see that the selection has been restored
-    assert set(cmds.ls(selection=True, flatten=True)) == set(selection)
+    # Check to see that the selection has been set
+    assert set(cmds.ls(selection=True, flatten=True)) == {
+        "polyPlane.e[107]",
+        "polyPlane.e[109]",
+        "polyPlane.e[117]",
+        "polyPlane.e[103]",
+        "polyPlane.e[113]",
+        "polyPlane.e[101]",
+        "polyPlane.e[105]",
+        "polyPlane.e[115]",
+        "polyPlane.e[99]",
+        "polyPlane.e[111]",
+    }
     # Check to see that vertices between the selected have moved
     vertex_id: int
     for vertex_id in (54, 58, 62):
@@ -156,8 +167,19 @@ def test_curve_distribute_between_vertices_3(poly_plane: str) -> None:
     curve_distribute_vertices(
         use_selection_order=True, distribution_type=DistributionType.UNIFORM
     )
-    # Check to see that the selection has been restored
-    assert set(cmds.ls(selection=True, flatten=True)) == set(selection)
+    # Check to see that the selection has been set
+    assert set(cmds.ls(selection=True, flatten=True)) == {
+        "polyPlane.e[103]",
+        "polyPlane.e[107]",
+        "polyPlane.e[105]",
+        "polyPlane.e[99]",
+        "polyPlane.e[111]",
+        "polyPlane.e[117]",
+        "polyPlane.e[115]",
+        "polyPlane.e[109]",
+        "polyPlane.e[101]",
+        "polyPlane.e[113]",
+    }
     # Check to see that vertices between the selected have moved
     vertex_id: int
     for vertex_id in (61, 56):
@@ -188,6 +210,7 @@ def test_edges_between_vertices_sphere(poly_sphere: str) -> None:
         "polySphere.vtx[353]",
         "polySphere.vtx[357]",
         "polySphere.vtx[341]",
+        use_selection_order=True,
     ) == (
         "polySphere.e[353]",
         "polySphere.e[354]",

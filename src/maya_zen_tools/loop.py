@@ -382,6 +382,8 @@ def curve_distribute_vertices(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    # Store the original selection
+    selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
     # If vertices are not explicitly passed, we get them by
     # flattening the current selection of vertices
     selected_vertices = selected_vertices or tuple(
@@ -419,7 +421,9 @@ def curve_distribute_vertices(
         cmds.delete(curve_shape, constructionHistory=True)
         cmds.delete(curve_transform, constructionHistory=True)
         cmds.delete(curve_transform)
-        cmds.select(*edges)
+        cmds.select(*selection)
+        cmds.select(*edges, add=True)
+        cmds.select(selected_vertices, deselect=True)
         return edges
     # Go into object selection mode, in order to manipulate locators
     cmds.selectMode(object=True)
