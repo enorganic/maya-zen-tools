@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib
 import json
 import sys
 from subprocess import check_output
 from traceback import format_exception
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -90,3 +91,16 @@ def get_maya_zen_tools_package_info() -> dict[str, str]:
         if package_info["name"] == MAYA_ZEN_TOOLS:
             return package_info
     raise KeyError(MAYA_ZEN_TOOLS)
+
+
+def as_tuple(
+    user_function: Callable[..., Iterable[Any]],
+) -> Callable[..., tuple[Any, ...]]:
+    """
+    This is a decorator which will return an iterable as a tuple.
+    """
+
+    def wrapper(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+        return tuple(user_function(*args, **kwargs) or ())
+
+    return functools.update_wrapper(wrapper, user_function)

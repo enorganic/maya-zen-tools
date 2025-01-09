@@ -700,3 +700,294 @@ def iter_shortest_vertices_path_uniform_positions(
         iter_shortest_vertices_path(selected_vertices),
         spans=len(selected_vertices) - 1,
     )
+
+
+def _get_contiguous_edges_terminal_vertices(
+    edges: Sequence[str],
+) -> tuple[str, str]:
+    """
+    Get the vertices at the start and end of the given sequence
+    of contiguous edges.
+    """
+    if len(edges) == 1:
+        # Both edge vertices are ends
+        return tuple(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    *edges, fromEdge=True, toVertex=True
+                ),
+                flatten=True,
+            )[:2]
+        )
+    return (
+        (
+            set(
+                cmds.ls(
+                    *cmds.polyListComponentConversion(
+                        edges[0], fromEdge=True, toVertex=True
+                    ),
+                    flatten=True,
+                )
+            )
+            - set(
+                cmds.ls(
+                    *cmds.polyListComponentConversion(
+                        edges[1], fromEdge=True, toVertex=True
+                    ),
+                    flatten=True,
+                )
+            )
+        ).pop(),
+        (
+            set(
+                cmds.ls(
+                    *cmds.polyListComponentConversion(
+                        edges[-1], fromEdge=True, toVertex=True
+                    ),
+                    flatten=True,
+                )
+            )
+            - set(
+                cmds.ls(
+                    *cmds.polyListComponentConversion(
+                        edges[-2], fromEdge=True, toVertex=True
+                    ),
+                    flatten=True,
+                )
+            )
+        ).pop(),
+    )
+
+
+def _get_rotated_vertex_loop(
+    vertices: tuple[str, ...], terminal_vertex: str
+) -> tuple[str, ...]:
+    """
+    Rotate a (closed) vertex loop so the `terminal_vertex` is the first
+    and last vertex in the loop.
+    """
+    if vertices[0] == terminal_vertex:
+        return vertices
+    index: int = vertices.index(terminal_vertex)
+    return (
+        # Vertex loops start and end with the same vertex, so we drop the last
+        # item when rotating, then include the terminal vertex at both the
+        # start and end
+        vertices[index:-1] + vertices[: index + 1]
+    )
+
+
+def _iter_directionally_aligned_vertex_loops(
+    vertex_loops: Sequence[tuple[str, ...]],
+) -> Iterable[tuple[str, ...]]:
+    """
+    Given a series of vertex loops, reverse where needed to make them all
+    sorted in the same direction
+    """
+    reference_vertex: str = vertex_loops[0][1]
+    yield vertex_loops[0]
+    vertex_loop: tuple[str, ...]
+    for vertex_loop in vertex_loops:
+        penterminus_vertices: tuple[str, str] = (
+            vertex_loop[1],
+            vertex_loop[-2],
+        )
+        if (
+            tuple(
+                iter_sort_vertices_by_distance(
+                    reference_vertex, set(penterminus_vertices)
+                )
+            )
+            == penterminus_vertices
+        ):
+            yield vertex_loop
+        else:
+            # Since the next-to-last vertex was closed than the second
+            # vertex to the reference, we need to reverse the loop
+            yield tuple(reversed(vertex_loop))
+
+
+def _iter_align_closed_loop_contiguous_edges(
+    edge_loops: list[tuple[str, ...]],
+) -> Iterable[tuple[str, ...]]:
+    """
+    This function yields sorted and aligned rearrangements of the (closed)
+    edge loops provided as input.
+    """
+    if len(edge_loops) == 1:
+        yield from edge_loops
+        return
+    edge_loop: tuple[str, ...]
+    vertex_loops: list[tuple[str, ...]] = [
+        tuple(iter_edges_vertices(edge_loop)) for edge_loop in edge_loops
+    ]
+    # Find a corner vertex by getting the furthest vertex from the first start
+    # vertex
+    other_vertices: set[str] = set()
+    vertex_loop: tuple[str, ...]
+    for vertex_loop in vertex_loops[1:]:
+        other_vertices |= set(vertex_loop)
+    # Finding the vertex the furthest from any in one of our loops would work,
+    # but we can marginaslly reduce overhead by use a known endpoint and
+    # excluding the vertices in that end points looop
+    origin_vertex: str = find_end_vertex(
+        other_vertices, origin_vertex=vertex_loops[0][0]
+    )
+    vertex_loop_sets: tuple[set[str], ...] = tuple(map(set, vertex_loops))
+    unused_loop_indices: set[int] = set(range(len(vertex_loops)))
+    # Now we will find the closest vertex to the origin on each other loop,
+    # and align the vertex loops so that each begins/ends with that vertex
+    vertices: set[str] = {origin_vertex}
+    sorted_vertex_loops: list[tuple[str, ...]] = []
+    while unused_loop_indices:
+        index: int
+        for index in tuple(unused_loop_indices):
+            matched_vertices: set[str] = vertices & vertex_loop_sets[index]
+            if matched_vertices:
+                sorted_vertex_loops.append(
+                    _get_rotated_vertex_loop(
+                        vertex_loops[index], matched_vertices.pop()
+                    )
+                )
+                unused_loop_indices.remove(index)
+                break
+        if unused_loop_indices:
+            shared_edge_vertices: set = get_shared_edge_vertices(vertices)
+            if not shared_edge_vertices:
+                # If there are loops unconsumed, but we can't grow the
+                # vertex selection any further, the mesh is likely not
+                # contiguous
+                raise NonContiguousMeshSelectionError(edge_loops)
+            vertices |= shared_edge_vertices
+    for vertex_loop in _iter_directionally_aligned_vertex_loops(
+        sorted_vertex_loops
+    ):
+        yield tuple(iter_vertices_edges(vertex_loop))
+
+
+def iter_aligned_contiguous_edges(
+    *selected_edges: str,
+) -> Iterable[tuple[str, ...]]:
+    """
+    Given one or more groups of aligned contiguous edges, yield a tuple
+    containing each set of contiguous edges
+    """
+    edge_loop_segments: list[tuple[str, ...]] = list(
+        iter_contiguous_edges(*selected_edges)
+    )
+    if (
+        len(edge_loop_segments[0]) > 2  # noqa: PLR2004
+        and edge_loop_segments[0][0] != edge_loop_segments[0][-1]
+        and cmds.polyListComponentConversion(
+            edge_loop_segments[0][0],
+            edge_loop_segments[0][-1],
+            toVertex=True,
+            fromEdge=True,
+            internal=True,
+        )
+    ):
+        # If the first and last edges share a vertex, the edges form a closed
+        # loop, so we require an alternate alignment strategy
+        yield from _iter_align_closed_loop_contiguous_edges(edge_loop_segments)
+        return
+    # Get the start and end vertices for each segment
+    origin_vertex: str | None = None
+    segment_terminal_vertices: tuple[str, ...]
+    start_vertices_edges: dict[str, tuple[str, ...]] = {}
+    for index, segment_terminal_vertices in enumerate(
+        map(_get_contiguous_edges_terminal_vertices, edge_loop_segments)
+    ):
+        if origin_vertex is None:
+            start_vertices_edges[segment_terminal_vertices[0]] = tuple(
+                edge_loop_segments[index]
+            )
+            # This vertex will be used to align subsequent segments
+            origin_vertex = segment_terminal_vertices[0]
+        else:
+            sorted_segment_terminal_vertices: tuple[str, ...] = tuple(
+                iter_sort_vertices_by_distance(
+                    origin_vertex, set(segment_terminal_vertices)
+                )
+            )
+            start_vertices_edges[sorted_segment_terminal_vertices[0]] = tuple(
+                edge_loop_segments[index]
+                if (
+                    sorted_segment_terminal_vertices
+                    == segment_terminal_vertices
+                )
+                # If the terminal vertices changed order when sorted, the
+                # segment was inverted, so we reverse it
+                else reversed(edge_loop_segments[index])
+            )
+    # Sort the edge loops
+    start_vertex: str
+    for start_vertex in iter_sorted_vertices(start_vertices_edges.keys()):
+        yield start_vertices_edges[start_vertex]
+
+
+def iter_contiguous_edges(  # noqa: C901
+    *selected_edges: str,
+) -> Iterable[tuple[str, ...]]:
+    """
+    Yield tuples of contiguous edge loop segments.
+
+    Parameters:
+        selected_edges: Two or more edge loop segments comprised of equal
+            numbers edges each, with ends alignged along perpendicular
+            edge loops forming a rectangular section of a mesh.
+    """
+    edges: set[str] = set(selected_edges)
+    edge_loop_segments: list[list[str]] = []
+    edge_loop_segment: list[str]
+    # Organize edges into contiguous segments
+    while edges:
+        edge: str = edges.pop()
+        adjacent_edges: set[str] = set(get_shared_vertex_edges({edge}))
+        # This is a list of edge loop segment indices where the edge could be
+        # appended. Since two segments could be matched for the same edge,
+        # we need to retain this as a list.
+        found: int | None = None
+        index: int
+        for index, edge_loop_segment in enumerate(edge_loop_segments):
+            if not edge_loop_segment:
+                continue
+            if edge_loop_segment[0] in adjacent_edges:
+                # This edge is adjacent to the first edge in the segment
+                if found is None:
+                    edge_loop_segment.insert(0, edge)
+                    found = index
+                    # Keep looking to see if there is a second match
+                    continue
+                else:
+                    if edge == edge_loop_segments[found][-1]:
+                        edge_loop_segments[found].extend(edge_loop_segment)
+                    else:
+                        edge_loop_segments[found] = (
+                            list(reversed(edge_loop_segment))
+                            + edge_loop_segments[found]
+                        )
+                    edge_loop_segment.clear()
+                    break
+            if edge_loop_segment[-1] in adjacent_edges:
+                # This edge is adjacent to the last edge in the segment
+                if found is None:
+                    edge_loop_segment.append(edge)
+                    found = index
+                    # Keep looking to see if there is a second match
+                    continue
+                else:
+                    if edge == edge_loop_segments[found][-1]:
+                        edge_loop_segments[found].extend(
+                            reversed(edge_loop_segment)
+                        )
+                    else:
+                        edge_loop_segments[found] = (
+                            list(edge_loop_segment) + edge_loop_segments[found]
+                        )
+                    edge_loop_segment.clear()
+                    break
+        if found is None:
+            # This edge is not adjacent to any segments started thus far
+            edge_loop_segments.append([edge])
+    # Remove the cleared segments (they've been joined with another)
+    yield from map(tuple, filter(None, edge_loop_segments))

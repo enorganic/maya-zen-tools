@@ -91,6 +91,7 @@ def create_menu() -> None:
     )
     cmds.menuSet(MENU_SET, addMenu=MENU)
     # Selection
+    cmds.menuItem(label="Selection", parent=MENU, divider=True)
     cmds.menuItem(
         label=SELECT_EDGES_BETWEEN_VERTICES_LABEL,
         command=(
@@ -120,7 +121,8 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
-    # Mesh Tools
+    # Modeling
+    cmds.menuItem(label="Modeling", parent=MENU, divider=True)
     cmds.menuItem(
         label=CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
         command=(
@@ -136,15 +138,6 @@ def create_menu() -> None:
             "from maya_zen_tools import loop\n"
             "loop.show_curve_distribute_vertices_options()"
         ),
-        parent=MENU,
-    )
-    cmds.menuItem(
-        label=CREATE_CURVE_FROM_EDGES_LABEL,
-        command=(
-            "from maya_zen_tools import loop\n"
-            "loop.create_curve_from_edges()"
-        ),
-        annotation="Create a curve from a contiguous edge selection.",
         parent=MENU,
     )
     cmds.menuItem(
@@ -167,6 +160,17 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
+        label=CREATE_CURVE_FROM_EDGES_LABEL,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.create_curve_from_edges()"
+        ),
+        annotation="Create a curve from a contiguous edge selection.",
+        parent=MENU,
+    )
+    cmds.menuItem(label="Texturing", parent=MENU, divider=True)
+    cmds.menuItem(label="Help", parent=MENU, divider=True)
+    cmds.menuItem(
         label="About ZenTools",
         command=(
             "import maya_zen_tools.menu\n" "maya_zen_tools.menu.show_about()"
@@ -174,7 +178,7 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
-        label="ZenTools Help",
+        label="ZenTools Documentation",
         command=(
             "import webbrowser\n"
             "webbrowser.open('https://maya-zen-tools.enorganic.org')"

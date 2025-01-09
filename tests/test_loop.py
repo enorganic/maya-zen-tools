@@ -421,7 +421,7 @@ def test_create_curve_from_edges(poly_sphere: str) -> None:
         "polySphere.e[258]",
         "polySphere.e[259]",
     )
-    curve_shape: str = create_curve_from_edges()[0]
+    curve_shape: str = create_curve_from_edges()[0][0]
     assert cmds.getAttr(f"{curve_shape}.spans") == 20
 
 

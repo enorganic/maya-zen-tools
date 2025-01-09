@@ -12,15 +12,16 @@ from maya_zen_tools import options
 from maya_zen_tools._create import create_edges_rebuild_curve, create_locator
 from maya_zen_tools._traverse import (
     get_components_shape,
+    iter_contiguous_edges,
     iter_selected_components,
     iter_shortest_vertices_path,
     iter_shortest_vertices_path_proportional_positions,
     iter_shortest_vertices_path_uniform_positions,
-    iter_sorted_contiguous_edges,
     iter_sorted_vertices,
     iter_vertices_edges,
 )
 from maya_zen_tools._ui import WINDOW
+from maya_zen_tools._utilities import as_tuple
 from maya_zen_tools.menu import (
     CLOSE_CHECKBOX,
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
@@ -434,19 +435,25 @@ def curve_distribute_vertices(
     return edges
 
 
-def create_curve_from_edges(*selected_edges: str) -> tuple[str, str]:
-    selected_edges = tuple(
-        iter_sorted_contiguous_edges(
-            selected_edges or iter_selected_components("e")
+@as_tuple
+def create_curve_from_edges(*selected_edges: str) -> Iterable[tuple[str, str]]:
+    edges: tuple[str, ...]
+    for edges in iter_contiguous_edges(
+        *(selected_edges or iter_selected_components("e"))
+    ):
+        rebuild_curve: str = create_edges_rebuild_curve(edges)
+        curve_transform: str = cmds.createNode(
+            "transform", name="curveFromEdges#"
         )
-    )
-    rebuild_curve: str = create_edges_rebuild_curve(selected_edges)
-    curve_transform: str = cmds.createNode("transform", name="curveFromEdges#")
-    curve_shape: str = cmds.createNode(
-        "nurbsCurve", parent=curve_transform, name=f"{curve_transform}Shape"
-    )
-    cmds.connectAttr(f"{rebuild_curve}.outputCurve", f"{curve_shape}.create")
-    return curve_shape, curve_transform
+        curve_shape: str = cmds.createNode(
+            "nurbsCurve",
+            parent=curve_transform,
+            name=f"{curve_transform}Shape",
+        )
+        cmds.connectAttr(
+            f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
+        )
+        yield curve_shape, curve_transform
 
 
 def show_curve_distribute_vertices_options() -> None:
