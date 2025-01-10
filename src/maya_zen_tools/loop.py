@@ -436,11 +436,10 @@ def curve_distribute_vertices(
 
 
 @as_tuple
-def create_curve_from_edges(*selected_edges: str) -> Iterable[tuple[str, str]]:
+def create_curve_from_edges(*selected_edges: str) -> Iterable[str]:
     edges: tuple[str, ...]
-    for edges in iter_contiguous_edges(
-        *(selected_edges or iter_selected_components("e"))
-    ):
+    selected_edges = selected_edges or tuple(iter_selected_components("e"))
+    for edges in iter_contiguous_edges(*selected_edges):
         rebuild_curve: str = create_edges_rebuild_curve(edges)
         curve_transform: str = cmds.createNode(
             "transform", name="curveFromEdges#"
@@ -453,7 +452,7 @@ def create_curve_from_edges(*selected_edges: str) -> Iterable[tuple[str, str]]:
         cmds.connectAttr(
             f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
         )
-        yield curve_shape, curve_transform
+        yield curve_shape
 
 
 def show_curve_distribute_vertices_options() -> None:

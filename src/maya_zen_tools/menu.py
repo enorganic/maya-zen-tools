@@ -23,6 +23,10 @@ CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
 LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
     "Loft Distribute Vertices Between Edges"
 )
+CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = "Curve Distribute Between UVs"
+LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL: str = (
+    "Loft Distribute UVs Between Edges"
+)
 CREATE_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges"
 ABOUT_WINDOW: str = "zenToolsAboutWindow"
 CLOSE_CHECKBOX: str = "zenToolsCloseCheckBox"
@@ -159,21 +163,47 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
+    # Texturing
+    cmds.menuItem(label="Texturing", parent=MENU, divider=True)
     cmds.menuItem(
-        label=CREATE_CURVE_FROM_EDGES_LABEL,
+        label=CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
         command=(
             "from maya_zen_tools import loop\n"
-            "loop.create_curve_from_edges()"
+            "loop.do_curve_distribute_uvs()"
         ),
-        annotation="Create a curve from a contiguous edge selection.",
+        annotation="Align edge loop along a curve based on vertex selection.",
         parent=MENU,
     )
-    cmds.menuItem(label="Texturing", parent=MENU, divider=True)
+    cmds.menuItem(
+        optionBox=True,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.show_curve_distribute_uvs_options()"
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        label=LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL,
+        command=(
+            "from maya_zen_tools import loft\n"
+            "loft.do_loft_distribute_uvs_between_edges()"
+        ),
+        annotation=("Distribute UVs between two or more parallel edge loops."),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        optionBox=True,
+        command=(
+            "from maya_zen_tools import loft;"
+            "loft.show_loft_distribute_uvs_between_edges_options()"
+        ),
+        parent=MENU,
+    )
     cmds.menuItem(label="Help", parent=MENU, divider=True)
     cmds.menuItem(
         label="About ZenTools",
         command=(
-            "import maya_zen_tools.menu\n" "maya_zen_tools.menu.show_about()"
+            "import maya_zen_tools.menu\nmaya_zen_tools.menu.show_about()"
         ),
         parent=MENU,
     )
@@ -190,7 +220,17 @@ def create_menu() -> None:
         if package_info.get("editable_project_location") is not None:
             # Only show these menu items if `maya-zen-tools` is an
             # editable installation (indicating it is installed for
+            cmds.menuItem(label="Debugging", parent=MENU, divider=True)
             # development/testing)
+            cmds.menuItem(
+                label=CREATE_CURVE_FROM_EDGES_LABEL,
+                command=(
+                    "from maya_zen_tools import loop\n"
+                    "loop.create_curve_from_edges()"
+                ),
+                annotation="Create a curve from a contiguous edge selection.",
+                parent=MENU,
+            )
             cmds.menuItem(
                 label="Reload ZenTools",
                 command=(
