@@ -69,6 +69,10 @@ class _Options:
         self._dict[tool][option] = value
         self.save()
 
+    def reset(self) -> None:
+        self._dict.clear()
+        self.save()
+
     def save(self) -> None:
         """
         Writes options to disk
@@ -112,3 +116,7 @@ def set_tool_option(tool: str, option: str, value: bool | float | str) -> None:
     Set a tool option.
     """
     _options.set(tool, option, value)
+
+
+def reset() -> None:
+    _options.reset()

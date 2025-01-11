@@ -8,18 +8,28 @@ from typing import Callable, Iterable
 from maya import cmds  # type: ignore
 
 from maya_zen_tools import options
-from maya_zen_tools._create import create_edges_rebuild_curve
+from maya_zen_tools._create import (
+    create_edges_rebuild_curve,
+    create_uvs_rebuild_curve,
+)
 from maya_zen_tools._traverse import (
     get_component_id,
     get_components_shape,
     iter_aligned_contiguous_edges,
+    iter_aligned_contiguous_uvs,
     iter_edges_vertices,
     iter_selected_components,
+    iter_shortest_uvs_path,
+    iter_uvs_path_proportional_positions,
+    iter_uvs_path_uniform_positions,
     iter_vertices_path_proportional_positions,
     iter_vertices_path_uniform_positions,
 )
 from maya_zen_tools._ui import WINDOW
-from maya_zen_tools.menu import LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL
+from maya_zen_tools.menu import (
+    LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL,
+    LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL,
+)
 
 
 def _surface_distribute_vertices_between_edges(
@@ -73,6 +83,62 @@ def _surface_distribute_vertices_between_edges(
     return set(vertices_positions.keys())
 
 
+def _surface_distribute_uvs(
+    surface_attribute: str,
+    uv_loops: tuple[tuple[str, ...], ...],
+    distribution_type: str = options.DistributionType.UNIFORM,
+) -> set[str]:
+    """
+    Given a surface output attribute and one or more UV loops, distribute all
+    UVs between the loops along the surface in UV space, and return the
+    UVs as a set.
+    """
+    uv_rings: tuple[tuple[str, ...], ...] = tuple(
+        map(
+            tuple,
+            map(
+                iter_shortest_uvs_path,
+                zip(*uv_loops),
+            ),
+        )
+    )
+    point_on_surface_info: str = cmds.createNode("pointOnSurfaceInfo")
+    cmds.connectAttr(
+        surface_attribute,
+        f"{point_on_surface_info}.inputSurface",
+    )
+    progress_window: str = cmds.progressWindow(
+        maxValue=len(uv_rings),
+    )
+    v_position: float
+    position: tuple[float, float, float]
+    spans: int = len(uv_loops) - 1
+    uvs_positions: dict[str, tuple[float, float, float]] = {}
+    for v_position, uv_ring in enumerate(uv_rings):
+        cmds.setAttr(f"{point_on_surface_info}.parameterV", v_position)
+        u_position: float
+        uv: str
+        for uv, u_position in (
+            iter_uvs_path_proportional_positions(uv_ring, spans=spans)
+            if distribution_type == options.DistributionType.PROPORTIONAL
+            else iter_uvs_path_uniform_positions(uv_ring, spans=spans)
+        ):
+            cmds.setAttr(f"{point_on_surface_info}.parameterU", u_position)
+            position = cmds.getAttr(f"{point_on_surface_info}.position")[0][:2]
+            # The positions are stored for subsequent moving rather than
+            # moved here in order to avoid having changes to the mesh
+            # affect changes to the surface in cases where the surface
+            # being used is created from polymesh edge curves
+            uvs_positions[uv] = position
+        cmds.progressWindow(progress_window, progress=v_position)
+    cmds.progressWindow(progress_window, endProgress=True)
+    for uv, position in uvs_positions.items():
+        cmds.polyEditUV(
+            uv, uValue=position[0], vValue=position[1], relative=False
+        )
+    return set(uvs_positions.keys())
+
+
 def _iter_edges_ring(
     selected_edge_loops: tuple[tuple[str, ...], ...],
 ) -> Iterable[tuple[str, ...]]:
@@ -106,16 +172,51 @@ def _iter_edges_ring(
     return zip(*edge_rings)
 
 
+def _iter_uv_edges_ring(
+    selected_edge_loops: tuple[tuple[str, ...], ...],
+) -> Iterable[tuple[str, ...]]:
+    """
+    Given two or more sorted and directionally aligned edge loops,
+    yield a ring of edge loops including those sandwiched between in UV
+    space, in order.
+    """
+    shape: str = get_components_shape(chain(*selected_edge_loops))
+    edge_rings: list[list[str]] = []
+    selected_edge_ring: tuple[str, ...]
+    for selected_edge_ring in zip(*selected_edge_loops):
+        previous_edge_id: int = get_component_id(selected_edge_ring[0])
+        edge: str
+        edge_ring: list[str] = [selected_edge_ring[0]]
+        for edge in selected_edge_ring[1:]:
+            edge_id: int = get_component_id(edge)
+            segment_edge_id: int
+            segment_edge_ids: tuple[int, ...] = tuple(
+                cmds.polySelect(
+                    shape, query=True, edgeRingPath=(previous_edge_id, edge_id)
+                )
+            )
+            if previous_edge_id != segment_edge_ids[0]:
+                segment_edge_ids = tuple(reversed(segment_edge_ids))
+            for segment_edge_id in segment_edge_ids[1:]:
+                edge_ring.append(  # noqa: PERF401
+                    f"{shape}.e[{segment_edge_id}]"
+                )
+            previous_edge_id = edge_id
+        edge_rings.append(edge_ring)
+    return zip(*edge_rings)
+
+
 def loft_distribute_vertices_between_edges(
     *selected_edges: str,
     distribution_type: str = options.DistributionType.UNIFORM,
     create_deformer: bool = False,
-) -> tuple[tuple[str, ...]] | tuple[tuple[str, ...], str, str, str]:
+) -> tuple[str, ...] | tuple[tuple[str, ...], str, str, str]:
     """
     Given a selection of edge loop segments, aligned parallel to one
     another on a polygon mesh, distribute the vertices sandwiched between
     along a loft.
     """
+    cleanup: list[str] = []
     selected_edges = selected_edges or tuple(iter_selected_components("e"))
     selected_edge_loops: tuple[tuple[str, ...], ...] = tuple(
         iter_aligned_contiguous_edges(*selected_edges)
@@ -129,9 +230,11 @@ def loft_distribute_vertices_between_edges(
         cmds.connectAttr(
             f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
         )
+        cleanup.append(rebuild_curve)
     rebuild_surface: str = cmds.createNode(
         "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
     )
+    cleanup.append(rebuild_surface)
     cmds.connectAttr(
         f"{loft}.outputSurface",
         f"{rebuild_surface}.inputSurface",
@@ -179,10 +282,88 @@ def loft_distribute_vertices_between_edges(
         cmds.proximityWrap(wrap, edit=True, addDrivers=[surface_shape])
         cmds.waitCursor(state=False)
         return (faces, surface_shape, surface_transform, wrap)
-    cmds.delete(rebuild_surface)
+    cmds.delete(*cleanup)
     cmds.waitCursor(state=False)
     cmds.select(*faces)
-    return (faces,)
+    return faces
+
+
+def loft_distribute_uvs_between_edges(
+    *selection: str,
+    distribution_type: str = options.DistributionType.UNIFORM,
+) -> tuple[str, ...]:
+    """
+    Given a selection of edge loop segments or uv loop segments, aligned
+    parallel to one another on a polygon mesh, distribute the UVs sandwiched
+    between along a loft.
+    """
+    cleanup: list[str] = []
+    selection = selection or tuple(iter_selected_components("e", "map"))
+    selected_uvs: set[str] = set(
+        iter_selected_components("map", selection=selection)
+    )
+    selected_edges: set[str] = set(
+        iter_selected_components("e", selection=selection)
+    )
+    if selected_edges:
+        selected_uvs |= set(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    *selected_edges,
+                    fromEdge=True,
+                    toUV=True,
+                ),
+                flatten=True,
+            )
+        )
+    selected_uv_loops: tuple[tuple[str, ...], ...] = tuple(
+        iter_aligned_contiguous_uvs(*selected_uvs)
+    )
+    cmds.waitCursor(state=True)
+    index: int
+    uv_loop: tuple[str, ...]
+    loft: str = cmds.createNode("loft", name="loftBetweenUVs#")
+    for index, uv_loop in enumerate(selected_uv_loops):
+        rebuild_curve: str
+        curve_shape: str
+        curve_transform: str
+        rebuild_curve, curve_shape, curve_transform = create_uvs_rebuild_curve(
+            uv_loop
+        )
+        cleanup.extend((rebuild_curve, curve_shape, curve_transform))
+        cmds.connectAttr(
+            f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
+        )
+    rebuild_surface: str = cmds.createNode(
+        "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
+    )
+    cleanup.append(rebuild_surface)
+    cmds.connectAttr(
+        f"{loft}.outputSurface",
+        f"{rebuild_surface}.inputSurface",
+    )
+    cmds.setAttr(f"{rebuild_surface}.spansU", len(selected_uv_loops) - 1)
+    cmds.setAttr(f"{rebuild_surface}.spansV", len(selected_uv_loops[0]))
+    cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
+    cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
+    cmds.setAttr(f"{rebuild_surface}.direction", 0)
+    uvs: set[str] = _surface_distribute_uvs(
+        f"{rebuild_surface}.outputSurface",
+        uv_loops=selected_uv_loops,
+        distribution_type=distribution_type,
+    )
+    faces: tuple[str, ...] = tuple(
+        cmds.ls(
+            *cmds.polyListComponentConversion(
+                *uvs, fromUV=True, toFace=True, internal=True
+            ),
+            flatten=True,
+        )
+    )
+    cmds.delete(*cleanup)
+    cmds.waitCursor(state=False)
+    cmds.select(*faces)
+    return faces
 
 
 def show_loft_distribute_vertices_between_edges_options() -> None:
@@ -278,3 +459,76 @@ def do_loft_distribute_vertices_between_edges() -> None:
         "loft_distribute_vertices_between_edges"
     )
     loft_distribute_vertices_between_edges(**kwargs)  # type: ignore
+
+
+def show_loft_distribute_uvs_between_edges_options() -> None:
+    """
+    Show a window with options to use when executing
+    `loft_distribute_uvs_between_edges`.
+    """
+    # Get saved options
+    get_option: Callable[[str], str | int | float | None] = partial(
+        options.get_tool_option, "loft_distribute_uvs_between_edges"
+    )
+    # Create the window
+    if cmds.window(WINDOW, exists=True):
+        cmds.deleteUI(WINDOW)
+    cmds.window(
+        WINDOW,
+        width=240,
+        height=100,
+        title=(f"ZenTools: {LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL} Options"),
+    )
+    column_layout: str = cmds.columnLayout(
+        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+    )
+    selected: int = 1
+    with contextlib.suppress(ValueError):
+        selected = ("UNIFORM", "PROPORTIONAL").index(
+            get_option(  # type: ignore
+                "distribution_type", options.DistributionType.UNIFORM
+            )
+        ) + 1
+    cmds.radioButtonGrp(
+        label="Distribution Type:",
+        parent=column_layout,
+        numberOfRadioButtons=2,
+        label1="Uniform",
+        label2="Proportional",
+        columnAlign=(1, "left"),
+        changeCommand1=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'loft_distribute_uvs_between_edges', 'distribution_type', "
+            "'UNIFORM')"
+        ),
+        changeCommand2=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'loft_distribute_uvs_between_edges', 'distribution_type', "
+            "'PROPORTIONAL')"
+        ),
+        select=selected,
+        height=30,
+    )
+    cmds.button(
+        label="Distribute",
+        parent=column_layout,
+        command=(
+            "from maya_zen_tools import loft\n"
+            "from maya import cmds\n"
+            "loft.do_loft_distribute_uvs_between_edges()\n"
+            f"cmds.deleteUI('{WINDOW}')"
+        ),
+    )
+    cmds.showWindow(WINDOW)
+
+
+def do_loft_distribute_uvs_between_edges() -> None:
+    """
+    Retrieve options and execute `loft_distribute_uvs_between_edges`.
+    """
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
+        "loft_distribute_uvs_between_edges"
+    )
+    loft_distribute_uvs_between_edges(**kwargs)  # type: ignore

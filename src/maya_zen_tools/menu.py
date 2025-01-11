@@ -16,6 +16,8 @@ MENU: str = "zenToolsMenu"
 
 # Labels
 SELECT_EDGES_BETWEEN_VERTICES_LABEL: str = "Select Edges Between Vertices"
+SELECT_EDGES_BETWEEN_UVS_LABEL: str = "Select Edges Between UVs"
+SELECT_BETWEEN_UVS_LABEL: str = "Select Between UVs"
 FLOOD_SELECT_LABEL: str = "Flood Select"
 CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
     "Curve Distribute Between Vertices"
@@ -25,9 +27,10 @@ LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
 )
 CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = "Curve Distribute Between UVs"
 LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL: str = (
-    "Loft Distribute UVs Between Edges"
+    "Loft Distribute UVs Between Edges/UVs"
 )
 CREATE_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges"
+CREATE_UV_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges in UV Space"
 ABOUT_WINDOW: str = "zenToolsAboutWindow"
 CLOSE_CHECKBOX: str = "zenToolsCloseCheckBox"
 
@@ -113,6 +116,45 @@ def create_menu() -> None:
         command=(
             "from maya_zen_tools import loop\n"
             "loop.show_select_edges_between_vertices_options()"
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        label=SELECT_EDGES_BETWEEN_UVS_LABEL,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.do_select_edges_between_uvs()"
+        ),
+        annotation=(
+            "Selects an edge path containing the fewest edges necessary to "
+            "connect selected UVs."
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        optionBox=True,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.show_select_edges_between_uvs_options()"
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        label=SELECT_BETWEEN_UVS_LABEL,
+        command=(
+            "from maya_zen_tools import loop\n" "loop.do_select_between_uvs()"
+        ),
+        annotation=(
+            "Selects path containing the fewest UVs necessary to "
+            "connect selected UVs."
+        ),
+        parent=MENU,
+    )
+    cmds.menuItem(
+        optionBox=True,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "loop.show_select_between_uvs_options()"
         ),
         parent=MENU,
     )
@@ -215,6 +257,13 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
+    cmds.menuItem(
+        label="Reset ZenTools Options",
+        command=(
+            "import maya_zen_tools.options\nmaya_zen_tools.options.reset()"
+        ),
+        parent=MENU,
+    )
     with contextlib.suppress(Exception):
         package_info: dict[str, str] = get_maya_zen_tools_package_info()
         if package_info.get("editable_project_location") is not None:
@@ -229,6 +278,18 @@ def create_menu() -> None:
                     "loop.create_curve_from_edges()"
                 ),
                 annotation="Create a curve from a contiguous edge selection.",
+                parent=MENU,
+            )
+            cmds.menuItem(
+                label=CREATE_UV_CURVE_FROM_EDGES_LABEL,
+                command=(
+                    "from maya_zen_tools import loop\n"
+                    "loop.create_uv_curve_from_edges()"
+                ),
+                annotation=(
+                    "Create a curve from a contiguous edge selection in UV "
+                    "space"
+                ),
                 parent=MENU,
             )
             cmds.menuItem(

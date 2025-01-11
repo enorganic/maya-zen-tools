@@ -9,22 +9,35 @@ from typing import Callable, Iterable, Sequence
 from maya import cmds  # type: ignore
 
 from maya_zen_tools import options
-from maya_zen_tools._create import create_edges_rebuild_curve, create_locator
+from maya_zen_tools._create import (
+    create_edges_rebuild_curve,
+    create_locator,
+    create_uv_edges_rebuild_curve,
+)
 from maya_zen_tools._traverse import (
     get_components_shape,
     iter_contiguous_edges,
+    iter_contiguous_uv_edges,
     iter_selected_components,
+    iter_shortest_uvs_path,
+    iter_shortest_uvs_path_proportional_positions,
+    iter_shortest_uvs_path_uniform_positions,
     iter_shortest_vertices_path,
     iter_shortest_vertices_path_proportional_positions,
     iter_shortest_vertices_path_uniform_positions,
+    iter_sorted_uvs,
     iter_sorted_vertices,
+    iter_uvs_edges,
     iter_vertices_edges,
 )
 from maya_zen_tools._ui import WINDOW
 from maya_zen_tools._utilities import as_tuple
 from maya_zen_tools.menu import (
     CLOSE_CHECKBOX,
+    CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
+    SELECT_BETWEEN_UVS_LABEL,
+    SELECT_EDGES_BETWEEN_UVS_LABEL,
     SELECT_EDGES_BETWEEN_VERTICES_LABEL,
 )
 
@@ -162,6 +175,99 @@ def _create_curve_from_vertices(
     return (transform, shape, *locators)
 
 
+def _create_curve_from_uvs(
+    uvs: Sequence[str],
+    *,
+    close: bool = False,
+) -> tuple[str, ...]:
+    """
+    Given a selection of UVs along a shared edge loop, create a curve
+    passing between the UVs.
+
+    The curve type will be an *arc* if 3 UVs are selected, otherwise the
+    curve will emulate an "edit point" (EP) curve by creating a curve from
+    a 0-width loft.
+
+    Parameters:
+        uvs: A list of UVs to create the curve from.
+        close: If `True`, the curve will form a closed loop.
+    """
+    transform: str = cmds.createNode(
+        "transform", name="zenLoopCurve#", skipSelect=True
+    )
+    shape: str = cmds.createNode(
+        "nurbsCurve",
+        name="zenLoopCurveShape#",
+        parent=transform,
+        skipSelect=True,
+    )
+    index: int
+    translation: tuple[float, float, float]
+    if len(uvs) == 3 and not close:  # noqa: PLR2004
+        arc: str = cmds.createNode("makeThreePointCircularArc")
+        for index, uv in enumerate(uvs, 1):
+            translation = (*cmds.polyEditUV(uv, query=True), 0)
+            cmds.setAttr(
+                f"{arc}.point{index}",
+                *translation,
+            )
+        cmds.connectAttr(f"{arc}.outputCurve", f"{shape}.create")
+    else:
+        loft: str = cmds.createNode("loft")
+        curve_from_surface_iso: str = cmds.createNode("curveFromSurfaceIso")
+        cmds.setAttr(f"{curve_from_surface_iso}.isoparmDirection", 0)
+        cmds.setAttr(f"{loft}.uniform", 0)
+        if close:
+            cmds.setAttr(f"{loft}.close", 1)
+        for index, uv in enumerate(uvs, 0):
+            translation = (*cmds.polyEditUV(uv, query=True), 0)
+            point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+            cmds.setAttr(f"{point_matrix_mult}.inPoint", *translation)
+            # Create a 0-length curve to use as an edit point in a loft
+            # curve, parent that curve under our output curve transform
+            # node, and delete the loft curve's original transform node
+            loft_curve_transform: str = cmds.curve(
+                objectSpace=True,
+                degree=1,
+                point=((0, 0, 0), (0, 0, 0)),
+            )
+            loft_curve_shape: str = cmds.listRelatives(
+                loft_curve_transform, shapes=True, noIntermediate=True
+            )[0]
+            cmds.parent(
+                loft_curve_shape, transform, addObject=True, shape=True
+            )
+            cmds.delete(loft_curve_transform)
+            # Connect the inverse matrix from our transform node to the
+            # in-matrix of the point matrix multipliers
+            cmds.connectAttr(
+                f"{transform}.worldInverseMatrix",
+                f"{point_matrix_mult}.inMatrix",
+            )
+            # Connect the point matrix multiplier to the loft curve control
+            # points
+            cmds.connectAttr(
+                f"{point_matrix_mult}.output",
+                f"{loft_curve_shape}.controlPoints[0]",
+            )
+            cmds.connectAttr(
+                f"{point_matrix_mult}.output",
+                f"{loft_curve_shape}.controlPoints[1]",
+            )
+            # Connect the loft to the output curve shape
+            cmds.connectAttr(
+                f"{loft_curve_shape}.worldSpace[0]",
+                f"{loft}.inputCurve[{index}]",
+            )
+        cmds.connectAttr(
+            f"{loft}.outputSurface", f"{curve_from_surface_iso}.inputSurface"
+        )
+        cmds.connectAttr(
+            f"{curve_from_surface_iso}.outputCurve", f"{shape}.create"
+        )
+    return (transform, shape)
+
+
 def _create_wire_deformer(
     deform_curve_attribute: str,
     base_curve_attribute: str,
@@ -293,6 +399,82 @@ def _distribute_vertices_loop_along_curve(
     return curve_shape, tuple(map(itemgetter(0), vertices_positions))
 
 
+def _distribute_uvs_loop_along_curve(
+    selected_uvs: Sequence[str],
+    curve_shape: str,
+    *,
+    distribution_type: str = options.DistributionType.UNIFORM,
+) -> tuple[str, ...]:
+    """
+    Distribute UVs along a curve.
+
+    Parameters:
+        selected_uvs: Selected UVs. The distributed UVs
+            will be the UVs forming an edge loop between the selected
+            UVs.
+        curve_shape: The curve shape node.
+        distribution_type:
+            UNIFORM: Distribute UVs equidistant along the curve.
+            PROPORTIONAL: Distribute UVs such that edge lengths are
+                proportional to their original lengths in relation the sum
+                of all edge lengths.
+        sampling: Curve sampling
+
+    Returns:
+        A tuple with two items:
+        -   The curve shape name. If a deformer is created, this will not be
+            the same as the the input curve shape.
+        -   A tuple of the UVs distributed, in order
+    """
+    uvs_positions: tuple[tuple[str, float], ...] = tuple(
+        iter_shortest_uvs_path_proportional_positions(selected_uvs)
+        if distribution_type == options.DistributionType.PROPORTIONAL
+        else iter_shortest_uvs_path_uniform_positions(selected_uvs)
+    )
+    # Rebuild the curve
+    rebuild_curve: str = cmds.createNode("rebuildCurve")
+    cmds.connectAttr(f"{curve_shape}.local", f"{rebuild_curve}.inputCurve")
+    cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
+    cmds.setAttr(f"{rebuild_curve}.spans", len(selected_uvs) - 1)
+    cmds.setAttr(
+        f"{rebuild_curve}.degree", cmds.getAttr(f"{curve_shape}.degree")
+    )
+    cmds.setAttr(f"{rebuild_curve}.keepTangents", 1)
+    cmds.setAttr(f"{rebuild_curve}.keepEndPoints", 1)
+    cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
+    # This point-on-curve info node will slide along the curve to get
+    # transform values for the UVs
+    point_on_curve_info: str = cmds.createNode("pointOnCurveInfo")
+    point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+    cmds.connectAttr(
+        f"{rebuild_curve}.outputCurve", f"{point_on_curve_info}.inputCurve"
+    )
+    cmds.connectAttr(
+        f"{curve_shape}.worldMatrix[0]", f"{point_matrix_mult}.inMatrix"
+    )
+    cmds.connectAttr(
+        f"{point_on_curve_info}.position", f"{point_matrix_mult}.inPoint"
+    )
+    uv: str
+    curve_position: float
+    for uv, curve_position in uvs_positions:
+        cmds.setAttr(f"{point_on_curve_info}.parameter", curve_position)
+        position: tuple[str, str, str] = cmds.getAttr(
+            f"{point_matrix_mult}.output"
+        )[0]
+        cmds.polyEditUV(
+            uv, uValue=position[0], vValue=position[1], relative=False
+        )
+    # Disconnect and delete temporary nodes
+    cmds.disconnectAttr(
+        f"{rebuild_curve}.outputCurve", f"{point_on_curve_info}.inputCurve"
+    )
+    cmds.delete(point_on_curve_info)
+    cmds.delete(point_matrix_mult)
+    cmds.delete(rebuild_curve)
+    return tuple(map(itemgetter(0), uvs_positions))
+
+
 def select_edges_between_vertices(
     *selected_vertices: str,
     use_selection_order: bool = False,
@@ -342,6 +524,96 @@ def select_edges_between_vertices(
     cmds.select(selected_vertices, deselect=True)
     cmds.waitCursor(state=False)
     return edges
+
+
+def select_edges_between_uvs(
+    *selected_uvs: str,
+    use_selection_order: bool = False,
+    close: bool = False,
+) -> tuple[str, ...]:
+    """
+    Add the edges forming the shortest path between selected UVs to
+    the current selection.
+
+    Parameters:
+        use_selection_order: If `True`, the edge path will follow the selection
+            order, if two or more UVs are selected.
+        close: If `True`, the UVs between the last and first selected
+            UV will be included.
+
+    Returns:
+        A tuple of the selected edges.
+    """
+    cmds.waitCursor(state=True)
+    if use_selection_order:
+        # Check to make sure that selection order is being tracked, and fall
+        # back to automatic sorting if not.
+        use_selection_order = cmds.selectPref(
+            trackSelectionOrder=True, query=True
+        )
+    # If UVs are not explicitly passed, we get them by
+    # flattening the current selection of UVs
+    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+    if not use_selection_order:
+        # If we have opted not to use selection order, or are unable to because
+        # it is not being tracked, we fall back to auomatic sorting
+        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+    edges: tuple[str, ...] = tuple(
+        iter_uvs_edges(
+            iter_shortest_uvs_path(
+                (*selected_uvs, selected_uvs[0]) if close else selected_uvs
+            )
+        )
+    )
+    # Select edges
+    cmds.select(*edges, add=True)
+    # Deselect UVs
+    cmds.select(selected_uvs, deselect=True)
+    cmds.waitCursor(state=False)
+    return edges
+
+
+def select_between_uvs(
+    *selected_uvs: str,
+    use_selection_order: bool = False,
+    close: bool = False,
+) -> tuple[str, ...]:
+    """
+    Add the UVs forming the shortest path between selected UVs to
+    the current selection.
+
+    Parameters:
+        use_selection_order: If `True`, the path will follow the selection
+            order, if two or more UVs are selected.
+        close: If `True`, the UVs between the last and first selected
+            UV will be included.
+
+    Returns:
+        A tuple of the selected UVs.
+    """
+    cmds.waitCursor(state=True)
+    if use_selection_order:
+        # Check to make sure that selection order is being tracked, and fall
+        # back to automatic sorting if not.
+        use_selection_order = cmds.selectPref(
+            trackSelectionOrder=True, query=True
+        )
+    # If UVs are not explicitly passed, we get them by
+    # flattening the current selection of UVs
+    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+    if not use_selection_order:
+        # If we have opted not to use selection order, or are unable to because
+        # it is not being tracked, we fall back to auomatic sorting
+        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+    uvs: tuple[str, ...] = tuple(
+        iter_shortest_uvs_path(
+            (*selected_uvs, selected_uvs[0]) if close else selected_uvs
+        )
+    )
+    # Select edges
+    cmds.select(*uvs, add=True)
+    cmds.waitCursor(state=False)
+    return uvs
 
 
 def curve_distribute_vertices(
@@ -435,6 +707,75 @@ def curve_distribute_vertices(
     return edges
 
 
+def curve_distribute_uvs(
+    *selected_uvs: str,
+    distribution_type: str = options.DistributionType.UNIFORM,
+    use_selection_order: bool = False,
+    close: bool = False,
+) -> tuple[str, ...]:
+    """
+    Create a curve passing between selected UVs and distribute all
+    UVs on the edge loop segment along the curve.
+
+    The curve type will be an *arc* if 3 UVs are selected, otherwise it
+    will be an "edit point" (EP) curve.
+
+    Parameters:
+        selected_UVs: A list of UVs to create the curve from. If not
+            provided, the current selection will be used.
+        distribution_type: How to distribute UVs along the curve.
+            UNIFORM: Distribute UVs equidistant along the curve.
+            PROPORTIONAL: Distribute UVs such that edge lengths are
+                proportional to their original lengths in relation the sum
+                of all edge lengths.
+        create_deformer: If `True`, create a deformer.
+        use_selection_order: If `True`, the curve will be created in selection
+            order, otherwise, it will be automatically sorted.
+        close: If `True`, the curve distribution will form a closed loop, with
+            the first selected vertex also being the last.
+
+    Returns:
+        A tuple of the affected UVs.
+    """
+    cmds.waitCursor(state=True)
+    if use_selection_order:
+        # Check to make sure that selection order is being tracked, and fall
+        # back to automatic sorting if not.
+        use_selection_order = cmds.selectPref(
+            trackSelectionOrder=True, query=True
+        )
+    # Store the original selection
+    selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
+    # If UVs are not explicitly passed, we get them by
+    # flattening the current selection of UVs
+    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+    # Raise an error if selected UVs span more than one mesh
+    get_components_shape(selected_uvs)
+    if not use_selection_order:
+        # If we have opted not to use selection order, or are unable to because
+        # it is not being tracked, we fall back to auomatic sorting
+        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+    # Create the Curve
+    curve_transform: str
+    curve_shape: str
+    curve_transform, curve_shape = _create_curve_from_uvs(
+        selected_uvs, close=close
+    )
+    # Distribute UVs Along the Curve
+    uvs: tuple[str, ...] = _distribute_uvs_loop_along_curve(
+        ((*selected_uvs, selected_uvs[0]) if close else selected_uvs),
+        curve_shape,
+        distribution_type=distribution_type,
+    )
+    edges: tuple[str, ...] = tuple(iter_uvs_edges(uvs))
+    # Cleanup the curve and history
+    cmds.delete(curve_shape, constructionHistory=True)
+    cmds.delete(curve_transform, constructionHistory=True)
+    cmds.delete(curve_transform)
+    cmds.select(*selection, *uvs, add=True)
+    return edges
+
+
 @as_tuple
 def create_curve_from_edges(*selected_edges: str) -> Iterable[str]:
     edges: tuple[str, ...]
@@ -452,6 +793,15 @@ def create_curve_from_edges(*selected_edges: str) -> Iterable[str]:
         cmds.connectAttr(
             f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
         )
+        yield curve_shape
+
+
+@as_tuple
+def create_uv_curve_from_edges(*selected_edges: str) -> Iterable[str]:
+    edges: tuple[str, ...]
+    selected_edges = selected_edges or tuple(iter_selected_components("e"))
+    for edges in iter_contiguous_uv_edges(*selected_edges):
+        curve_shape: str = create_uv_edges_rebuild_curve(edges)[1]
         yield curve_shape
 
 
@@ -507,7 +857,7 @@ def show_curve_distribute_vertices_options() -> None:
     )
     cmds.separator(parent=column_layout)
     use_selection_order: bool = get_option(  # type: ignore
-        "use_selection_order", True
+        "use_selection_order", False
     )
     cmds.checkBox(
         label="Use Selection Order",
@@ -596,6 +946,128 @@ def do_curve_distribute_vertices() -> None:
     curve_distribute_vertices(**kwargs)  # type: ignore
 
 
+def show_curve_distribute_uvs_options() -> None:
+    """
+    Show a window with options to use when executing
+    `curve_distribute_uvs`.
+    """
+    # Get saved options
+    get_option: Callable[[str], str | int | float | None] = partial(
+        options.get_tool_option, "curve_distribute_uvs"
+    )
+    # Create the window
+    if cmds.window(WINDOW, exists=True):
+        cmds.deleteUI(WINDOW)
+    cmds.window(
+        WINDOW,
+        width=240,
+        height=100,
+        title=f"ZenTools: {CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL} Options",
+    )
+    column_layout: str = cmds.columnLayout(
+        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+    )
+    selected: int = 1
+    with contextlib.suppress(ValueError):
+        selected = ("UNIFORM", "PROPORTIONAL").index(
+            get_option(  # type: ignore
+                "distribution_type", options.DistributionType.UNIFORM
+            )
+        ) + 1
+    cmds.radioButtonGrp(
+        label="Distribution Type:",
+        parent=column_layout,
+        numberOfRadioButtons=2,
+        label1="Uniform",
+        label2="Proportional",
+        columnAlign=(1, "left"),
+        changeCommand1=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'distribution_type', "
+            "'UNIFORM')"
+        ),
+        changeCommand2=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'distribution_type', "
+            "'PROPORTIONAL')"
+        ),
+        select=selected,
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    use_selection_order: bool = get_option(  # type: ignore
+        "use_selection_order", False
+    )
+    cmds.checkBox(
+        label="Use Selection Order",
+        parent=column_layout,
+        value=use_selection_order,  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'use_selection_order', "
+            "True)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=False)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'use_selection_order', "
+            "False)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=True)"
+        ),
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
+        CLOSE_CHECKBOX,
+        label="Close",
+        parent=column_layout,
+        value=get_option("close", False),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'close', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'curve_distribute_uvs', 'close', "
+            "False)"
+        ),
+        height=30,
+    )
+    if not use_selection_order:
+        cmds.disable(CLOSE_CHECKBOX, value=True)
+    cmds.button(
+        label="Distribute",
+        parent=column_layout,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "from maya import cmds\n"
+            "loop.do_curve_distribute_uvs()\n"
+            f"cmds.deleteUI('{WINDOW}')"
+        ),
+    )
+    cmds.showWindow(WINDOW)
+
+
+def do_curve_distribute_uvs() -> None:
+    """
+    Execute `curve_distribute_uvs`, getting arguments from the UI or
+    saved options.
+    """
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
+        "curve_distribute_uvs"
+    )
+    curve_distribute_uvs(**kwargs)  # type: ignore
+
+
 def show_select_edges_between_vertices_options() -> None:
     """
     Show a window with options to use when executing
@@ -618,7 +1090,7 @@ def show_select_edges_between_vertices_options() -> None:
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
     )
     use_selection_order: bool = get_option(  # type: ignore
-        "use_selection_order", True
+        "use_selection_order", False
     )
     cmds.checkBox(
         label="Use Selection Order",
@@ -686,3 +1158,187 @@ def do_select_edges_between_vertices() -> None:
         "select_edges_between_vertices"
     )
     select_edges_between_vertices(**kwargs)  # type: ignore
+
+
+def show_select_edges_between_uvs_options() -> None:
+    """
+    Show a window with options to use when executing
+    `select_edges_between_uvs`.
+    """
+    # Get saved options
+    get_option: Callable[[str], str | int | float | None] = partial(
+        options.get_tool_option, "select_edges_between_uvs"
+    )
+    # Create the window
+    if cmds.window(WINDOW, exists=True):
+        cmds.deleteUI(WINDOW)
+    cmds.window(
+        WINDOW,
+        width=240,
+        height=100,
+        title=f"ZenTools: {SELECT_EDGES_BETWEEN_UVS_LABEL} Options",
+    )
+    column_layout: str = cmds.columnLayout(
+        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+    )
+    use_selection_order: bool = get_option(  # type: ignore
+        "use_selection_order", False
+    )
+    cmds.checkBox(
+        label="Use Selection Order",
+        parent=column_layout,
+        value=use_selection_order,
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_uvs', 'use_selection_order', "
+            "True)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=False)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_uvs', 'use_selection_order', "
+            "False)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=True)"
+        ),
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
+        CLOSE_CHECKBOX,
+        label="Close",
+        parent=column_layout,
+        value=get_option("close", False),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_uvs', 'close', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_edges_between_uvs', 'close', "
+            "False)"
+        ),
+        height=30,
+    )
+    if not use_selection_order:
+        cmds.disable(CLOSE_CHECKBOX, value=True)
+    cmds.button(
+        label="Select",
+        parent=column_layout,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "from maya import cmds\n"
+            "loop.do_select_edges_between_uvs()\n"
+            f"cmds.deleteUI('{WINDOW}')"
+        ),
+    )
+    cmds.showWindow(WINDOW)
+
+
+def do_select_edges_between_uvs() -> None:
+    """
+    Execute `curve_distribute_uvs`, getting arguments from the UI or
+    saved options.
+    """
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
+        "select_edges_between_uvs"
+    )
+    select_edges_between_uvs(**kwargs)  # type: ignore
+
+
+def show_select_between_uvs_options() -> None:
+    """
+    Show a window with options to use when executing
+    `select_between_uvs`.
+    """
+    # Get saved options
+    get_option: Callable[[str], str | int | float | None] = partial(
+        options.get_tool_option, "select_between_uvs"
+    )
+    # Create the window
+    if cmds.window(WINDOW, exists=True):
+        cmds.deleteUI(WINDOW)
+    cmds.window(
+        WINDOW,
+        width=240,
+        height=100,
+        title=f"ZenTools: {SELECT_BETWEEN_UVS_LABEL} Options",
+    )
+    column_layout: str = cmds.columnLayout(
+        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+    )
+    use_selection_order: bool = get_option(  # type: ignore
+        "use_selection_order", False
+    )
+    cmds.checkBox(
+        label="Use Selection Order",
+        parent=column_layout,
+        value=use_selection_order,
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_between_uvs', 'use_selection_order', "
+            "True)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=False)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_between_uvs', 'use_selection_order', "
+            "False)\n"
+            "from maya import cmds\n"
+            f"cmds.disable('{CLOSE_CHECKBOX}', value=True)"
+        ),
+        height=30,
+    )
+    cmds.separator(parent=column_layout)
+    cmds.checkBox(
+        CLOSE_CHECKBOX,
+        label="Close",
+        parent=column_layout,
+        value=get_option("close", False),  # type: ignore
+        onCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_between_uvs', 'close', "
+            "True)"
+        ),
+        offCommand=(
+            "from maya_zen_tools import options\n"
+            "options.set_tool_option("
+            "'select_between_uvs', 'close', "
+            "False)"
+        ),
+        height=30,
+    )
+    if not use_selection_order:
+        cmds.disable(CLOSE_CHECKBOX, value=True)
+    cmds.button(
+        label="Select",
+        parent=column_layout,
+        command=(
+            "from maya_zen_tools import loop\n"
+            "from maya import cmds\n"
+            "loop.do_select_between_uvs()\n"
+            f"cmds.deleteUI('{WINDOW}')"
+        ),
+    )
+    cmds.showWindow(WINDOW)
+
+
+def do_select_between_uvs() -> None:
+    """
+    Execute `curve_distribute_uvs`, getting arguments from the UI or
+    saved options.
+    """
+    kwargs: dict[str, float | bool | str] = options.get_tool_options(
+        "select_between_uvs"
+    )
+    select_between_uvs(**kwargs)  # type: ignore

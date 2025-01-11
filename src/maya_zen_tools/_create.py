@@ -7,6 +7,8 @@ from maya import cmds  # type: ignore
 from maya_zen_tools._traverse import (
     get_component_id,
     get_components_shape,
+    get_transform_shape,
+    iter_edges_uvs,
     iter_edges_vertices,
 )
 
@@ -49,8 +51,6 @@ def create_edges_rebuild_curve(edges: Iterable[str]) -> str:
     edges = tuple(edges)
     vertices: tuple[str, ...] = tuple(iter_edges_vertices(edges))
     polymesh_shape: str = get_components_shape(edges)
-    curve_transform: str = cmds.createNode("transform")
-    curve_shape: str = cmds.createNode("nurbsCurve", parent=curve_transform)
     point_on_curve_info: str = cmds.createNode("pointOnCurveInfo")
     cmds.setAttr(f"{point_on_curve_info}.parameter", 0)
     cmds.setAttr(f"{point_on_curve_info}.turnOnPercentage", 1)
@@ -113,22 +113,46 @@ def create_edges_rebuild_curve(edges: Iterable[str]) -> str:
         curve_from_mesh_edges = attach_curve
     rebuild_curve: str = cmds.createNode("rebuildCurve")
     cmds.connectAttr(
-        f"{curve_from_mesh_edges}.outputCurve", f"{curve_shape}.create"
-    )
-    cmds.connectAttr(
         f"{curve_from_mesh_edges}.outputCurve", f"{rebuild_curve}.inputCurve"
     )
     cmds.setAttr(f"{rebuild_curve}.keepControlPoints", 1)
     cmds.setAttr(f"{rebuild_curve}.degree", 1)
     cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
-    cmds.setAttr(
-        f"{rebuild_curve}.spans", cmds.getAttr(f"{curve_shape}.spans")
-    )
+    cmds.setAttr(f"{rebuild_curve}.spans", len(edges))
     cmds.setAttr(f"{rebuild_curve}.endKnots", 1)
     # Make the range 0 -> # spans
     cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
-    cmds.disconnectAttr(
-        f"{curve_from_mesh_edges}.outputCurve", f"{curve_shape}.create"
-    )
-    cmds.delete(curve_transform, point_on_curve_info)
     return rebuild_curve
+
+
+def create_uv_edges_rebuild_curve(
+    edges: Iterable[str],
+) -> tuple[str, str, str]:
+    """
+    Create a (rebuilt) curve in UV space from contiguous edges
+    """
+    return create_uvs_rebuild_curve(iter_edges_uvs(edges))
+
+
+def create_uvs_rebuild_curve(
+    uvs: Iterable[str],
+) -> tuple[str, str, str]:
+    """
+    Create a (rebuilt) curve in UV space from contiguous edges
+    """
+    uvs = tuple(uvs)
+    curve_transform: str = cmds.curve(
+        editPoint=tuple((*cmds.polyEditUV(uv, query=True), 0.0) for uv in uvs),
+        degree=1,
+    )
+    curve_shape: str = get_transform_shape(curve_transform)
+    rebuild_curve: str = cmds.createNode("rebuildCurve")
+    cmds.connectAttr(f"{curve_shape}.local", f"{rebuild_curve}.inputCurve")
+    cmds.setAttr(f"{rebuild_curve}.keepControlPoints", 1)
+    cmds.setAttr(f"{rebuild_curve}.degree", 1)
+    cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
+    cmds.setAttr(f"{rebuild_curve}.spans", len(uvs) - 1)
+    cmds.setAttr(f"{rebuild_curve}.endKnots", 1)
+    # Make the range 0 -> # spans
+    cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
+    return rebuild_curve, curve_shape, curve_transform

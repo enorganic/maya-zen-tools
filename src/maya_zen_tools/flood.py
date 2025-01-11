@@ -5,7 +5,7 @@ from typing import Iterable
 from maya import cmds  # type: ignore
 
 from maya_zen_tools._traverse import (
-    add_shared_edge_uvs,
+    add_shared_face_edge_uvs,
     get_components_shape,
     get_shared_edge_vertices,
     iter_selected_components,
@@ -99,7 +99,7 @@ def _iter_flood_select_uvs(
         # at the border, and once everything inside the border has been
         # added/yielded, `add_uvs` will be empty, thereby halting the
         # loop
-        add_uvs = add_shared_edge_uvs(uvs) - border_uvs
+        add_uvs = add_shared_face_edge_uvs(uvs) - border_uvs
         uvs |= add_uvs
     yield from border_uvs
 
