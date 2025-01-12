@@ -1471,9 +1471,55 @@ def iter_aligned_contiguous_uvs(
                 else reversed(uv_loop_segments[index])
             )
     # Sort the UV loops
+    # We re-use `uv_loop_segments` as it's no longer being used
     start_uv: str
-    for start_uv in iter_sorted_uvs(start_uvs_loops.keys()):
-        yield start_uvs_loops[start_uv]
+    uv_loop_segments = [
+        start_uvs_loops[start_uv]
+        for start_uv in iter_sorted_uvs(start_uvs_loops.keys())
+    ]
+    # Not we remove end UVs which are further from other segment
+    # ends than another UV in the segment (overhanging segment parts)
+    for index, uv_loop_segment in enumerate(uv_loop_segments):
+        start_index: int = 0
+        stop_index: int = len(uv_loop_segment)
+        uv_loop_segment_set: set[str] = set(uv_loop_segment)
+        other_index: int
+        other_uv_loop_segment: tuple[str, ...]
+        for other_index, other_uv_loop_segment in enumerate(uv_loop_segments):
+            if other_index == index:
+                continue
+            # If there is a UV closer to the other segment's first UV
+            # than the first UV in this segment, we move the start of this
+            # segment to that UV
+            start_index = max(
+                start_index,
+                uv_loop_segment.index(
+                    next(
+                        iter(
+                            iter_sort_uvs_by_distance(
+                                other_uv_loop_segment[0], uv_loop_segment_set
+                            )
+                        )
+                    )
+                ),
+            )
+            # If there is a UV closer to the other segment's last UV
+            # than the last UV in this segment, we move the end of this segment
+            # to that UV
+            stop_index = min(
+                stop_index,
+                uv_loop_segment.index(
+                    next(
+                        iter(
+                            iter_sort_uvs_by_distance(
+                                other_uv_loop_segment[-1], uv_loop_segment_set
+                            )
+                        )
+                    )
+                )
+                + 1,
+            )
+        yield uv_loop_segment[start_index:stop_index]
 
 
 def iter_contiguous_edges(  # noqa: C901

@@ -11,6 +11,7 @@ from maya_zen_tools._traverse import (
     get_polymesh_shape_uvs_positions,
     get_polymesh_shape_vertices_positions,
     iter_aligned_contiguous_edges,
+    iter_aligned_contiguous_uvs,
 )
 from maya_zen_tools.loft import (
     loft_distribute_uvs_between_edges_or_uvs,
@@ -1019,6 +1020,62 @@ def test_iter_aligned_contiguous_edges_poly_plane(poly_plane: str) -> None:
         "polyPlane.e[144]",
         "polyPlane.e[152]",
         "polyPlane.e[158]",
+    }
+
+
+def test_iter_aligned_contiguous_uvs_poly_plane(poly_plane: str) -> None:
+    """
+    Test re-alignment of UV loop segments which are imperfectly aligned
+    """
+    assert poly_plane == "polyPlane"
+    assert set(
+        chain(
+            *iter_aligned_contiguous_uvs(
+                "polyPlane.map[22]",
+                "polyPlane.map[25]",
+                "polyPlane.map[33]",
+                "polyPlane.map[36]",
+                "polyPlane.map[39]",
+                "polyPlane.map[44]",
+                "polyPlane.map[47]",
+                "polyPlane.map[50]",
+                "polyPlane.map[55]",
+                "polyPlane.map[58]",
+                "polyPlane.map[61]",
+                "polyPlane.map[66]",
+                "polyPlane.map[69]",
+                "polyPlane.map[72]",
+                "polyPlane.map[77]",
+                "polyPlane.map[80]",
+                "polyPlane.map[83]",
+                "polyPlane.map[88]",
+                "polyPlane.map[91]",
+                "polyPlane.map[94]",
+                "polyPlane.map[99]",
+                "polyPlane.map[105]",
+                "polyPlane.map[110]",
+                "polyPlane.map[116]",
+            )
+        )
+    ) == {
+        "polyPlane.map[33]",
+        "polyPlane.map[36]",
+        "polyPlane.map[39]",
+        "polyPlane.map[44]",
+        "polyPlane.map[47]",
+        "polyPlane.map[50]",
+        "polyPlane.map[55]",
+        "polyPlane.map[58]",
+        "polyPlane.map[61]",
+        "polyPlane.map[66]",
+        "polyPlane.map[69]",
+        "polyPlane.map[72]",
+        "polyPlane.map[77]",
+        "polyPlane.map[80]",
+        "polyPlane.map[83]",
+        "polyPlane.map[88]",
+        "polyPlane.map[91]",
+        "polyPlane.map[94]",
     }
 
 
