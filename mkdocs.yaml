@@ -4,10 +4,27 @@ repo_url: https://github.com/enorganic/maya-zen-tools/
 edit_uri: blob/main/docs/
 nav:
 - Introduction: 'index.md'
-- CLI Reference: 'cli.md'
+- Installation: 'installation.md'
+- Selection:
+  - Select Edges Between Vertices: 'selection/select-edges-between-vertices.md'
+  - Select Edges Between UVs: 'selection/select-edges-between-uvs.md'
+  - Select UVs Between UVs: 'selection/select-uvs-between-uvs.md'
+  - Flood Select: 'selection/flood-select.md'
+- Modeling:
+  - Curve Distribute Between Vertices: 'modeling/curve-distribute-between-vertices.md'
+  - Loft Distribute Vertices Between Edges: 'modeling/loft-distribute-vertices-between-edges.md'
+- Texturing:
+  - Curve Distribute Between UVs: 'texturing/curve-distribute-between-uvs.md'
+  - Loft Distribute UVs Between Edges or UVs: 'texturing/loft-distribute-uvs-between-edges-or-uvs.md'
 - API Reference:
-    - download: 'api/download.md'
-    - tag-version: 'api/tag_version.md'
+  - errors: 'api/errors.md'
+  - flood: 'api/flood.md'
+  - install: 'api/install.md'
+  - loft: 'api/loft.md'
+  - loop: 'api/loop.md'
+  - menu: 'api/menu.md'
+  - options: 'api/options.md'
+  - startup: 'api/startup.md'
 - Contributing: 'contributing.md'
 theme:
   name: material

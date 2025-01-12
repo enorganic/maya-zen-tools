@@ -35,7 +35,7 @@ from maya_zen_tools._utilities import as_tuple
 from maya_zen_tools.menu import (
     CLOSE_CHECKBOX,
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
-    CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL,
+    CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
     SELECT_EDGES_BETWEEN_UVS_LABEL,
     SELECT_EDGES_BETWEEN_VERTICES_LABEL,
     SELECT_UVS_BETWEEN_UVS_LABEL,
@@ -721,14 +721,13 @@ def curve_distribute_uvs(
     will be an "edit point" (EP) curve.
 
     Parameters:
-        selected_UVs: A list of UVs to create the curve from. If not
+        selected_uvs: A list of UVs to create the curve from. If not
             provided, the current selection will be used.
         distribution_type: How to distribute UVs along the curve.
             UNIFORM: Distribute UVs equidistant along the curve.
             PROPORTIONAL: Distribute UVs such that edge lengths are
                 proportional to their original lengths in relation the sum
                 of all edge lengths.
-        create_deformer: If `True`, create a deformer.
         use_selection_order: If `True`, the curve will be created in selection
             order, otherwise, it will be automatically sorted.
         close: If `True`, the curve distribution will form a closed loop, with
@@ -962,7 +961,7 @@ def show_curve_distribute_uvs_options() -> None:
         WINDOW,
         width=240,
         height=100,
-        title=f"ZenTools: {CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL} Options",
+        title=f"ZenTools: {CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL} Options",
     )
     column_layout: str = cmds.columnLayout(
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15

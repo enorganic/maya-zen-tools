@@ -26,8 +26,8 @@ CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
 LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
     "Loft Distribute Vertices Between Edges"
 )
-CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL: str = (
-    "Curve Distribute UVs Between UVs"
+CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = (
+    "Curve Distribute Between UVs"
 )
 LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL: str = (
     "Loft Distribute UVs Between Edges or UVs"
@@ -244,7 +244,7 @@ def create_menu() -> None:
     # Texturing
     cmds.menuItem(label="Texturing", parent=MENU, divider=True)
     cmds.menuItem(
-        label=CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL,
+        label=CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
         command=(
             "from maya_zen_tools import loop\n"
             "loop.do_curve_distribute_uvs()"
