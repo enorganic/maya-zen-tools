@@ -45,7 +45,8 @@ def uninstall() -> None:
             "-m",
             "pip",
             "uninstall",
-            "-y" "maya-zen-tools",
+            "-y",
+            "maya-zen-tools",
         ]
     )
     # Delete the ZenTools menu
