@@ -9,3 +9,5 @@ and/or UVs.
 
 - [Documentation](https://maya-zen-tools.enorganic.org)
 - [Contributing](https://maya-zen-tools.enorganic.org/contributing) (to the development of this package)
+
+<video src="https://maya-zen-tools.enorganic.org/assets/videos/maya-zen-tools-demo.mp4" autoplay=true loop=true controls=true />
