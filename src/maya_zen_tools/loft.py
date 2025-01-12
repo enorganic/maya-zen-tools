@@ -27,7 +27,7 @@ from maya_zen_tools._traverse import (
 )
 from maya_zen_tools._ui import WINDOW
 from maya_zen_tools.menu import (
-    LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL,
+    LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL,
     LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL,
 )
 
@@ -288,7 +288,7 @@ def loft_distribute_vertices_between_edges(
     return faces
 
 
-def loft_distribute_uvs_between_edges(
+def loft_distribute_uvs_between_edges_or_uvs(
     *selection: str,
     distribution_type: str = options.DistributionType.UNIFORM,
 ) -> tuple[str, ...]:
@@ -461,14 +461,14 @@ def do_loft_distribute_vertices_between_edges() -> None:
     loft_distribute_vertices_between_edges(**kwargs)  # type: ignore
 
 
-def show_loft_distribute_uvs_between_edges_options() -> None:
+def show_loft_distribute_uvs_between_edges_or_uvs_options() -> None:
     """
     Show a window with options to use when executing
-    `loft_distribute_uvs_between_edges`.
+    `loft_distribute_uvs_between_edges_or_uvs`.
     """
     # Get saved options
     get_option: Callable[[str], str | int | float | None] = partial(
-        options.get_tool_option, "loft_distribute_uvs_between_edges"
+        options.get_tool_option, "loft_distribute_uvs_between_edges_or_uvs"
     )
     # Create the window
     if cmds.window(WINDOW, exists=True):
@@ -477,7 +477,10 @@ def show_loft_distribute_uvs_between_edges_options() -> None:
         WINDOW,
         width=240,
         height=100,
-        title=(f"ZenTools: {LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL} Options"),
+        title=(
+            "ZenTools: "
+            f"{LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL} Options"
+        ),
     )
     column_layout: str = cmds.columnLayout(
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
@@ -499,13 +502,13 @@ def show_loft_distribute_uvs_between_edges_options() -> None:
         changeCommand1=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
-            "'loft_distribute_uvs_between_edges', 'distribution_type', "
+            "'loft_distribute_uvs_between_edges_or_uvs', 'distribution_type', "
             "'UNIFORM')"
         ),
         changeCommand2=(
             "from maya_zen_tools import options\n"
             "options.set_tool_option("
-            "'loft_distribute_uvs_between_edges', 'distribution_type', "
+            "'loft_distribute_uvs_between_edges_or_uvs', 'distribution_type', "
             "'PROPORTIONAL')"
         ),
         select=selected,
@@ -517,18 +520,18 @@ def show_loft_distribute_uvs_between_edges_options() -> None:
         command=(
             "from maya_zen_tools import loft\n"
             "from maya import cmds\n"
-            "loft.do_loft_distribute_uvs_between_edges()\n"
+            "loft.do_loft_distribute_uvs_between_edges_or_uvs()\n"
             f"cmds.deleteUI('{WINDOW}')"
         ),
     )
     cmds.showWindow(WINDOW)
 
 
-def do_loft_distribute_uvs_between_edges() -> None:
+def do_loft_distribute_uvs_between_edges_or_uvs() -> None:
     """
-    Retrieve options and execute `loft_distribute_uvs_between_edges`.
+    Retrieve options and execute `loft_distribute_uvs_between_edges_or_uvs`.
     """
     kwargs: dict[str, float | bool | str] = options.get_tool_options(
-        "loft_distribute_uvs_between_edges"
+        "loft_distribute_uvs_between_edges_or_uvs"
     )
-    loft_distribute_uvs_between_edges(**kwargs)  # type: ignore
+    loft_distribute_uvs_between_edges_or_uvs(**kwargs)  # type: ignore

@@ -7,9 +7,14 @@ maya.standalone.initialize(name="python")
 from maya import cmds  # type: ignore  # noqa: E402
 
 from maya_zen_tools import startup  # noqa
-from maya_zen_tools._traverse import iter_edges_vertices  # noqa: E402
+from maya_zen_tools._traverse import (  # noqa: E402
+    get_polymesh_shape_changed_uvs_positions,
+    get_polymesh_shape_uvs_positions,
+    iter_edges_vertices,
+)
 from maya_zen_tools.loop import (  # noqa: E402
     create_curve_from_edges,
+    curve_distribute_uvs,
     curve_distribute_vertices,
     select_edges_between_vertices,
 )
@@ -423,6 +428,166 @@ def test_create_curve_from_edges(poly_sphere: str) -> None:
     )
     curve_shape: str = create_curve_from_edges()[0]
     assert cmds.getAttr(f"{curve_shape}.spans") == 20
+
+
+def test_curve_distribute_vetween_uvs_3(poly_sphere: str) -> None:
+    assert poly_sphere == "polySphere"
+    uvs_positions: dict[int, tuple[float, float]] = (
+        get_polymesh_shape_uvs_positions("polySphere")
+    )
+    cmds.polyEditUV(
+        "polySphere.map[189]", uValue=-0.5, vValue=-0, relative=True
+    )
+    changed_uvs_positions: dict[int, tuple[float, float]] = (
+        get_polymesh_shape_changed_uvs_positions("polySphere", uvs_positions)
+    )
+    assert set(changed_uvs_positions.keys()) == {189}
+    cmds.select(
+        "polySphere.map[0]", "polySphere.map[189]", "polySphere.map[378]"
+    )
+    curve_distribute_uvs(distribution_type=DistributionType.PROPORTIONAL)
+    changed_uvs_positions = get_polymesh_shape_changed_uvs_positions(
+        "polySphere", uvs_positions
+    )
+    assert set(changed_uvs_positions.keys()) == {
+        0,
+        273,
+        147,
+        21,
+        294,
+        168,
+        42,
+        315,
+        189,
+        63,
+        336,
+        210,
+        84,
+        357,
+        231,
+        105,
+        378,
+        252,
+        126,
+    }
+    # Now redistribute uniformly, and verify that the positions are different
+    uvs_positions = get_polymesh_shape_uvs_positions("polySphere")
+    cmds.select(clear=True)
+    cmds.select(
+        "polySphere.map[0]", "polySphere.map[189]", "polySphere.map[378]"
+    )
+    curve_distribute_uvs(distribution_type=DistributionType.UNIFORM)
+    changed_uvs_positions = get_polymesh_shape_changed_uvs_positions(
+        "polySphere", uvs_positions
+    )
+    assert set(changed_uvs_positions.keys()) == {
+        0,
+        273,
+        147,
+        21,
+        294,
+        168,
+        42,
+        315,
+        189,
+        63,
+        336,
+        210,
+        84,
+        357,
+        231,
+        105,
+        378,
+        252,
+        126,
+    }
+
+
+def test_curve_distribute_vetween_uvs_4(poly_sphere: str) -> None:
+    assert poly_sphere == "polySphere"
+    uvs_positions: dict[int, tuple[float, float]] = (
+        get_polymesh_shape_uvs_positions("polySphere")
+    )
+    cmds.polyEditUV(
+        "polySphere.map[294]",
+        "polySphere.map[84]",
+        uValue=-0.5,
+        vValue=-0,
+        relative=True,
+    )
+    changed_uvs_positions: dict[int, tuple[float, float]] = (
+        get_polymesh_shape_changed_uvs_positions("polySphere", uvs_positions)
+    )
+    assert set(changed_uvs_positions.keys()) == {294, 84}
+    cmds.select(
+        "polySphere.map[0]",
+        "polySphere.map[294]",
+        "polySphere.map[84]",
+        "polySphere.map[378]",
+    )
+    curve_distribute_uvs(distribution_type=DistributionType.PROPORTIONAL)
+    changed_uvs_positions = get_polymesh_shape_changed_uvs_positions(
+        "polySphere", uvs_positions
+    )
+    # Here we force-include start and end UVs, as they may move
+    # fractionally, but not consistently
+    assert set(changed_uvs_positions.keys()) | {378, 0} == {
+        0,
+        273,
+        147,
+        21,
+        294,
+        168,
+        42,
+        315,
+        189,
+        63,
+        336,
+        210,
+        84,
+        357,
+        231,
+        105,
+        252,
+        126,
+        378,
+    }
+    # Now redistribute uniformly, and verify that the positions are different
+    uvs_positions = get_polymesh_shape_uvs_positions("polySphere")
+    cmds.select(clear=True)
+    cmds.select(
+        "polySphere.map[0]",
+        "polySphere.map[294]",
+        "polySphere.map[84]",
+        "polySphere.map[378]",
+    )
+    curve_distribute_uvs(distribution_type=DistributionType.UNIFORM)
+    changed_uvs_positions = get_polymesh_shape_changed_uvs_positions(
+        "polySphere", uvs_positions
+    )
+    # Here we force-include start and end UVs, as they may move
+    # fractionally, but not consistently
+    assert set(changed_uvs_positions.keys()) | {378, 0} == {
+        0,
+        273,
+        147,
+        21,
+        294,
+        168,
+        42,
+        315,
+        189,
+        63,
+        336,
+        210,
+        84,
+        357,
+        231,
+        105,
+        252,
+        126,
+        378,
+    }
 
 
 if __name__ == "__main__":

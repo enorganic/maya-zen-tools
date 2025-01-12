@@ -34,11 +34,11 @@ from maya_zen_tools._ui import WINDOW
 from maya_zen_tools._utilities import as_tuple
 from maya_zen_tools.menu import (
     CLOSE_CHECKBOX,
-    CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
     CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL,
-    SELECT_BETWEEN_UVS_LABEL,
+    CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL,
     SELECT_EDGES_BETWEEN_UVS_LABEL,
     SELECT_EDGES_BETWEEN_VERTICES_LABEL,
+    SELECT_UVS_BETWEEN_UVS_LABEL,
 )
 
 
@@ -962,7 +962,7 @@ def show_curve_distribute_uvs_options() -> None:
         WINDOW,
         width=240,
         height=100,
-        title=f"ZenTools: {CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL} Options",
+        title=f"ZenTools: {CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL} Options",
     )
     column_layout: str = cmds.columnLayout(
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
@@ -1268,7 +1268,7 @@ def show_select_between_uvs_options() -> None:
         WINDOW,
         width=240,
         height=100,
-        title=f"ZenTools: {SELECT_BETWEEN_UVS_LABEL} Options",
+        title=f"ZenTools: {SELECT_UVS_BETWEEN_UVS_LABEL} Options",
     )
     column_layout: str = cmds.columnLayout(
         adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15

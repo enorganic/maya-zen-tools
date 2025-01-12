@@ -17,7 +17,7 @@ MENU: str = "zenToolsMenu"
 # Labels
 SELECT_EDGES_BETWEEN_VERTICES_LABEL: str = "Select Edges Between Vertices"
 SELECT_EDGES_BETWEEN_UVS_LABEL: str = "Select Edges Between UVs"
-SELECT_BETWEEN_UVS_LABEL: str = "Select Between UVs"
+SELECT_UVS_BETWEEN_UVS_LABEL: str = "Select UVs Between UVs"
 FLOOD_SELECT_LABEL: str = "Flood Select"
 CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
     "Curve Distribute Between Vertices"
@@ -25,9 +25,11 @@ CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
 LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
     "Loft Distribute Vertices Between Edges"
 )
-CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = "Curve Distribute Between UVs"
-LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL: str = (
-    "Loft Distribute UVs Between Edges/UVs"
+CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL: str = (
+    "Curve Distribute UVs Between UVs"
+)
+LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL: str = (
+    "Loft Distribute UVs Between Edges or UVs"
 )
 CREATE_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges"
 CREATE_UV_CURVE_FROM_EDGES_LABEL: str = "Create Curve from Edges in UV Space"
@@ -140,7 +142,7 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
-        label=SELECT_BETWEEN_UVS_LABEL,
+        label=SELECT_UVS_BETWEEN_UVS_LABEL,
         command=(
             "from maya_zen_tools import loop\n" "loop.do_select_between_uvs()"
         ),
@@ -208,7 +210,7 @@ def create_menu() -> None:
     # Texturing
     cmds.menuItem(label="Texturing", parent=MENU, divider=True)
     cmds.menuItem(
-        label=CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL,
+        label=CURVE_DISTRIBUTE_UVS_BETWEEN_UVS_LABEL,
         command=(
             "from maya_zen_tools import loop\n"
             "loop.do_curve_distribute_uvs()"
@@ -225,10 +227,10 @@ def create_menu() -> None:
         parent=MENU,
     )
     cmds.menuItem(
-        label=LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_LABEL,
+        label=LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL,
         command=(
             "from maya_zen_tools import loft\n"
-            "loft.do_loft_distribute_uvs_between_edges()"
+            "loft.do_loft_distribute_uvs_between_edges_or_uvs()"
         ),
         annotation=("Distribute UVs between two or more parallel edge loops."),
         parent=MENU,
@@ -237,7 +239,7 @@ def create_menu() -> None:
         optionBox=True,
         command=(
             "from maya_zen_tools import loft;"
-            "loft.show_loft_distribute_uvs_between_edges_options()"
+            "loft.show_loft_distribute_uvs_between_edges_or_uvs_options()"
         ),
         parent=MENU,
     )

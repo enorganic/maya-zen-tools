@@ -11,7 +11,7 @@ from maya_zen_tools._traverse import (
     iter_aligned_contiguous_edges,
 )
 from maya_zen_tools.loft import (
-    loft_distribute_uvs_between_edges,
+    loft_distribute_uvs_between_edges_or_uvs,
     loft_distribute_vertices_between_edges,
 )
 
@@ -393,12 +393,12 @@ def test_loft_distribute_vertices_between_edges_poly_sphere_longitude(
     }
 
 
-def test_loft_distribute_uvs_between_edges_poly_sphere(
+def test_loft_distribute_uvs_between_edges_or_uvs_poly_sphere(
     poly_sphere: str,
 ) -> None:
     """
-    This tests `maya_zen_tools.loft.loft_distribute_uvs_between_edges` by
-    verifying affected UVs.
+    This tests `maya_zen_tools.loft.loft_distribute_uvs_between_edges_or_uvs`
+    by verifying affected UVs.
     """
     assert poly_sphere == "polySphere"
     uvs_positions: dict[int, tuple[float, float]] = (
@@ -455,7 +455,7 @@ def test_loft_distribute_uvs_between_edges_poly_sphere(
         "polySphere.map[397]",
         "polySphere.map[398]",
     )
-    assert set(loft_distribute_uvs_between_edges()) == {
+    assert set(loft_distribute_uvs_between_edges_or_uvs()) == {
         "polySphere.f[151]",
         "polySphere.f[234]",
         "polySphere.f[240]",
