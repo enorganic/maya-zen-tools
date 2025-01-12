@@ -1,4 +1,4 @@
-# Contributing to maya-zen-tools
+# Contributing to ZenTools for Maya
 
 ## For Contributors and Code Owners
 
