@@ -8,6 +8,7 @@ from maya import cmds  # type: ignore
 from maya_zen_tools._utilities import (
     get_maya_zen_tools_package_info,  # type: ignore
 )
+from maya_zen_tools.options import get_tool_option
 
 # UI Components
 MAYA_WINDOW: str = "MayaWindow"
@@ -61,7 +62,40 @@ def show_about() -> None:
         align="left",
         parent=column_layout,
     )
-    row_layout: str = cmds.rowLayout(
+    debugging: bool = get_tool_option(  # type: ignore
+        "general", "debugging", False
+    )
+    row_layout: str
+    # If debugging is enabled, or if ZenTools is installed as an editable
+    # package, show an option to enable/disable debugging
+    with contextlib.suppress(Exception):
+        package_info: dict[str, str] = get_maya_zen_tools_package_info()
+        if debugging or (
+            package_info.get("editable_project_location") is not None
+        ):
+            cmds.checkBox(
+                label="Enable Debugging",
+                parent=column_layout,
+                value=debugging,  # type: ignore
+                onCommand=(
+                    "from maya_zen_tools import options\n"
+                    "options.set_tool_option("
+                    "'general', 'debugging', "
+                    "True)\n"
+                    "from maya_zen_tools import _utilities\n"
+                    "_utilities.reload()"
+                ),
+                offCommand=(
+                    "from maya_zen_tools import options\n"
+                    "options.set_tool_option("
+                    "'general', 'debugging', "
+                    "False)\n"
+                    "from maya_zen_tools import _utilities\n"
+                    "_utilities.reload()"
+                ),
+                height=30,
+            )
+    row_layout = cmds.rowLayout(
         parent=column_layout,
         numberOfColumns=2,
     )
@@ -266,39 +300,36 @@ def create_menu() -> None:
         ),
         parent=MENU,
     )
-    with contextlib.suppress(Exception):
-        package_info: dict[str, str] = get_maya_zen_tools_package_info()
-        if package_info.get("editable_project_location") is not None:
-            # Only show these menu items if `maya-zen-tools` is an
-            # editable installation (indicating it is installed for
-            cmds.menuItem(label="Debugging", parent=MENU, divider=True)
-            # development/testing)
-            cmds.menuItem(
-                label=CREATE_CURVE_FROM_EDGES_LABEL,
-                command=(
-                    "from maya_zen_tools import loop\n"
-                    "loop.create_curve_from_edges()"
-                ),
-                annotation="Create a curve from a contiguous edge selection.",
-                parent=MENU,
-            )
-            cmds.menuItem(
-                label=CREATE_UV_CURVE_FROM_EDGES_LABEL,
-                command=(
-                    "from maya_zen_tools import loop\n"
-                    "loop.create_uv_curve_from_edges()"
-                ),
-                annotation=(
-                    "Create a curve from a contiguous edge selection in UV "
-                    "space"
-                ),
-                parent=MENU,
-            )
-            cmds.menuItem(
-                label="Reload ZenTools",
-                command=(
-                    "from maya_zen_tools import _utilities\n"
-                    "_utilities.reload()"
-                ),
-                parent=MENU,
-            )
+    if get_tool_option("general", "debugging", False):
+        # Only show these menu items if `maya-zen-tools` is an
+        # editable installation (indicating it is installed for
+        cmds.menuItem(label="Debugging", parent=MENU, divider=True)
+        # development/testing)
+        cmds.menuItem(
+            label=CREATE_CURVE_FROM_EDGES_LABEL,
+            command=(
+                "from maya_zen_tools import loop\n"
+                "loop.create_curve_from_edges()"
+            ),
+            annotation="Create a curve from a contiguous edge selection.",
+            parent=MENU,
+        )
+        cmds.menuItem(
+            label=CREATE_UV_CURVE_FROM_EDGES_LABEL,
+            command=(
+                "from maya_zen_tools import loop\n"
+                "loop.create_uv_curve_from_edges()"
+            ),
+            annotation=(
+                "Create a curve from a contiguous edge selection in UV "
+                "space"
+            ),
+            parent=MENU,
+        )
+        cmds.menuItem(
+            label="Reload ZenTools",
+            command=(
+                "from maya_zen_tools import _utilities\n_utilities.reload()"
+            ),
+            parent=MENU,
+        )
