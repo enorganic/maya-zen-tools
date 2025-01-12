@@ -8,15 +8,20 @@ into your script editor (the semicolons are necessary in order to avoid
 opening the multi-line script editor):
 
 ```python
-from subprocesses import check_call;
+import sys;
+from subprocess import check_call;
 from pathlib import Path;
 from maya import cmds;
 
-mayapy: Path = Path(cmds.internalVar(mayaInstallDir=True)) / "bin" / "mayapy";
-check_call([str(mayapy), "-m", "pip", "install", "maya-zen-tools"]);
-check_call([str(mayapy), "-m", "maya_zen_tools.install"]);
-
-from maya_zen_tools import startup
+install_directory: Path = Path(cmds.internalVar(mayaInstallDir=True));
+mayapy: str = str(
+    install_directory.joinpath("Maya.app", "Contents", "bin", "mayapy")
+    if sys.platform == "darwin"
+    else install_directory.joinpath("bin", "mayapy")
+);
+check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"]);
+from maya_zen_tools import install, startup;
+install.main()
 ```
 
 -   In Maya, select the "modeling" menu set. You can do this from the top-left
