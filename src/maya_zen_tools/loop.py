@@ -277,23 +277,15 @@ def _create_wire_deformer(
     Create a wire deformer to manipulate specified vertices.
     """
     vertices = tuple(vertices)
-    shape: str = get_components_shape(vertices)
     wire: str = cmds.wire(
         vertices,
-        after=True,
+        # after=True,
         dropoffDistance=(0, float("inf")),
     )[0]
     cmds.connectAttr(base_curve_attribute, f"{wire}.baseWire[0]", force=True)
     cmds.connectAttr(
         deform_curve_attribute, f"{wire}.deformedWire[0]", force=True
     )
-    new_shape: str = cmds.listConnections(
-        f"{wire}.outputGeometry", source=False, destination=True, shapes=True
-    )[0]
-    # Rename the base shape and new shape such that the new shape inherits
-    # the base shape's name
-    cmds.rename(shape, f"{shape}WireBase")
-    cmds.rename(new_shape, shape)
     return wire
 
 
