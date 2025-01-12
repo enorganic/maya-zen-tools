@@ -7,6 +7,7 @@ install:
 	{ hatch --version || pipx install --upgrade hatch || python3 -m pip install --upgrade hatch ; } && \
 	mayapy -m pip install pip --upgrade && \
 	mayapy -m pip install mypy coverage pytest dependence -e . --upgrade --upgrade-strategy eager && \
+	mayapy -m maya_zen_tools.install && \
 	hatch env create default && \
 	hatch env create docs && \
 	hatch env create hatch-test && \

@@ -18,6 +18,8 @@ from pathlib import Path
 has_maya_cmds: bool = True
 try:
     from maya import cmds  # type: ignore
+
+    has_maya_cmds = hasattr(cmds, "internalVar")
 except ImportError:
     has_maya_cmds = False
 
