@@ -27,7 +27,7 @@ MAYA_ZEN_TOOLS: str = "maya-zen-tools"
 def which_mayapy() -> Path:
     maya_location: str | None = os.environ.get("MAYA_LOCATION")
     if maya_location:
-        return Path(maya_location) / "bin" / "mayapy"
+        return Path(maya_location).joinpath("bin", "mayapy")
     return Path(sys.executable)
 
 
@@ -84,7 +84,7 @@ def get_maya_zen_tools_package_info() -> dict[str, str]:
     package_info: dict[str, str]
     for package_info in json.loads(
         check_output(
-            [which_mayapy(), "-m", "pip", "list", "--format", "json"],
+            [str(which_mayapy()), "-m", "pip", "list", "--format", "json"],
             text=True,
         ).strip()
     ):

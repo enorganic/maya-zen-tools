@@ -8,16 +8,12 @@ into your script editor (the semicolons are necessary in order to avoid
 opening the multi-line script editor):
 
 ```python
-import sys;
+import os;
 from subprocess import check_call;
 from pathlib import Path;
-from maya import cmds;
 
-install_directory: Path = Path(cmds.internalVar(mayaInstallDir=True));
 mayapy: str = str(
-    install_directory.joinpath("Maya.app", "Contents", "bin", "mayapy")
-    if sys.platform == "darwin"
-    else install_directory.joinpath("bin", "mayapy")
+    Path(os.environ.get("MAYA_LOCATION")).joinpath("bin", "mayapy")
 );
 check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"]);
 from maya_zen_tools import install, startup;

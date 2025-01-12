@@ -26,7 +26,7 @@ def upgrade() -> None:
         return
     check_call(
         [
-            which_mayapy(),
+            str(which_mayapy()),
             "-m",
             "pip",
             "install",

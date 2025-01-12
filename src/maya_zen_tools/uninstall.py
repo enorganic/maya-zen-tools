@@ -6,8 +6,9 @@ needed to use ZenTools.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import re
-from subprocess import check_call
+from subprocess import CalledProcessError, check_call
 from typing import TYPE_CHECKING
 
 from maya import cmds  # type: ignore
@@ -39,15 +40,20 @@ def uninstall() -> None:
                 )
             )
     # Uninstall the `maya-zen-tools` package
-    check_call(
-        [
-            which_mayapy(),
-            "-m",
-            "pip",
-            "uninstall",
-            "maya-zen-tools",
-        ]
-    )
+    # Errors are suppressed here, because currently `pip uninstall`
+    # doesn't work from within Maya. This means that we can't
+    # uninstall the `maya-zen-tools` package, we can only strip
+    # the startup command from userSetup.py
+    with contextlib.suppress(CalledProcessError):
+        check_call(
+            [
+                str(which_mayapy()),
+                "-m",
+                "pip",
+                "uninstall",
+                "maya-zen-tools",
+            ]
+        )
     # Delete the ZenTools menu
     cmds.deleteUI(MENU)
 
