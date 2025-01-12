@@ -26,9 +26,7 @@ CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL: str = (
 LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL: str = (
     "Loft Distribute Vertices Between Edges"
 )
-CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = (
-    "Curve Distribute Between UVs"
-)
+CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL: str = "Curve Distribute Between UVs"
 LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL: str = (
     "Loft Distribute UVs Between Edges or UVs"
 )
