@@ -15,6 +15,7 @@ authors = [
     { email = "david@belais.me" },
 ]
 keywords = [
+    "autodesk",
     "maya",
     "zen-tools",
 ]
