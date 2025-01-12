@@ -26,6 +26,7 @@ from maya_zen_tools._traverse import (
     iter_vertices_path_uniform_positions,
 )
 from maya_zen_tools._ui import WINDOW
+from maya_zen_tools.errors import EdgesNotOnSameRingError
 from maya_zen_tools.menu import (
     LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL,
     LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL,
@@ -160,41 +161,12 @@ def _iter_edges_ring(
                 cmds.polySelect(
                     shape, query=True, edgeRingPath=(previous_edge_id, edge_id)
                 )
+                or ()
             )
-            if previous_edge_id != segment_edge_ids[0]:
-                segment_edge_ids = tuple(reversed(segment_edge_ids))
-            for segment_edge_id in segment_edge_ids[1:]:
-                edge_ring.append(  # noqa: PERF401
-                    f"{shape}.e[{segment_edge_id}]"
+            if not segment_edge_ids:
+                raise EdgesNotOnSameRingError(
+                    shape, (previous_edge_id, edge_id)
                 )
-            previous_edge_id = edge_id
-        edge_rings.append(edge_ring)
-    return zip(*edge_rings)
-
-
-def _iter_uv_edges_ring(
-    selected_edge_loops: tuple[tuple[str, ...], ...],
-) -> Iterable[tuple[str, ...]]:
-    """
-    Given two or more sorted and directionally aligned edge loops,
-    yield a ring of edge loops including those sandwiched between in UV
-    space, in order.
-    """
-    shape: str = get_components_shape(chain(*selected_edge_loops))
-    edge_rings: list[list[str]] = []
-    selected_edge_ring: tuple[str, ...]
-    for selected_edge_ring in zip(*selected_edge_loops):
-        previous_edge_id: int = get_component_id(selected_edge_ring[0])
-        edge: str
-        edge_ring: list[str] = [selected_edge_ring[0]]
-        for edge in selected_edge_ring[1:]:
-            edge_id: int = get_component_id(edge)
-            segment_edge_id: int
-            segment_edge_ids: tuple[int, ...] = tuple(
-                cmds.polySelect(
-                    shape, query=True, edgeRingPath=(previous_edge_id, edge_id)
-                )
-            )
             if previous_edge_id != segment_edge_ids[0]:
                 segment_edge_ids = tuple(reversed(segment_edge_ids))
             for segment_edge_id in segment_edge_ids[1:]:

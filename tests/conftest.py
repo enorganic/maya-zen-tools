@@ -78,3 +78,25 @@ def get_poly_cylinder() -> str:
         return "polyCylinder"
     cmds.file(str(scene), open=True, force=True)
     return "polyCylinder"
+
+
+@pytest.fixture(name="poly_cube")
+def get_poly_cube() -> str:
+    """
+    Retrieve a scene with a sphere which has known component IDs.
+    """
+    scene: Path = SCENES / "poly_cube.ma"
+    if not scene.is_file():
+        os.makedirs(str(scene.absolute().parent), exist_ok=True)
+        cmds.polyCube(
+            name="polyCube",
+            subdivisionsX=20,
+            subdivisionsY=20,
+            subdivisionsZ=20,
+            constructionHistory=False,
+        )[0]
+        cmds.file(rename=str(scene))
+        cmds.file(save=True, type="mayaAscii")
+        return "polyCube"
+    cmds.file(str(scene), open=True, force=True)
+    return "polyCube"

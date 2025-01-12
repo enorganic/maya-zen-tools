@@ -264,9 +264,6 @@ def iter_sorted_contiguous_edges(edges: Iterable[str]) -> Iterable[str]:
     order from one end to the other (which end starts is not guaranteed, so
     this should only be used where the direction does not matter).
 
-    Note: This works with closed loops, whereas `iter_sorted_edges`
-    does not.
-
     Parameters:
         edges: Two or more contiguous edges
     """
@@ -1147,7 +1144,7 @@ def _iter_directionally_aligned_vertex_loops(
     reference_vertex: str = vertex_loops[0][1]
     yield vertex_loops[0]
     vertex_loop: tuple[str, ...]
-    for vertex_loop in vertex_loops:
+    for vertex_loop in vertex_loops[1:]:
         penterminus_vertices: tuple[str, str] = (
             vertex_loop[1],
             vertex_loop[-2],
@@ -1301,6 +1298,35 @@ def _iter_align_closed_loop_contiguous_uvs(
         yield uv_loop
 
 
+def is_closed_edge_loop(edges: tuple[str, ...]) -> bool:
+    """
+    Given a tuple of (sorted) edges, return `True` if they form
+    a closed loop, otherwise return `False`
+    """
+    return bool(
+        set(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    edges[0],
+                    toVertex=True,
+                    fromEdge=True,
+                ),
+                flatten=True,
+            )
+        )
+        & set(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    edges[-1],
+                    toVertex=True,
+                    fromEdge=True,
+                ),
+                flatten=True,
+            )
+        )
+    )
+
+
 def iter_aligned_contiguous_edges(  # noqa: C901
     *selected_edges: str,
 ) -> Iterable[tuple[str, ...]]:
@@ -1314,23 +1340,7 @@ def iter_aligned_contiguous_edges(  # noqa: C901
     if (
         len(edge_loop_segments[0]) > 2  # noqa: PLR2004
         and edge_loop_segments[0][0] != edge_loop_segments[0][-1]
-        and (
-            # Check to see if the end edges share a vertex
-            set(
-                cmds.polyListComponentConversion(
-                    edge_loop_segments[0][0],
-                    toVertex=True,
-                    fromEdge=True,
-                )
-            )
-            & set(
-                cmds.polyListComponentConversion(
-                    edge_loop_segments[0][-1],
-                    toVertex=True,
-                    fromEdge=True,
-                )
-            )
-        )
+        and is_closed_edge_loop(edge_loop_segments[0])
     ):
         # If the first and last edges share a vertex, the edges form a closed
         # loop, so we require an alternate alignment strategy

@@ -21,6 +21,16 @@ class InvalidSelectionError(Exception):
     pass
 
 
+class EdgesNotOnSameRingError(InvalidSelectionError):
+    def __init__(self, shape: str, edge_ids: tuple[int, int]) -> None:
+        self.shape: str = shape
+        self.edge_ids: tuple[int, ...] = edge_ids
+        super().__init__(
+            "Edges are not on the same ring: "
+            f'("{shape}.e[{edge_ids[0]}]", "{shape}.e[{edge_ids[1]}]")'
+        )
+
+
 class NonLinearSelectionError(InvalidSelectionError):
     pass
 
