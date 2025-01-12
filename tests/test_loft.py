@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from itertools import chain
+
 import pytest
 from maya import cmds  # type: ignore
 
@@ -16,7 +18,7 @@ from maya_zen_tools.loft import (
 )
 
 
-def test_iter_contiguous_edges(poly_sphere: str) -> None:
+def test_iter_contiguous_edges_poly_sphere(poly_sphere: str) -> None:
     """
     This tests `maya_zen_tools.loft._iter_contiguous_edges` with a known
     set of edge loops forming 3 contiguous segments by verifying the number
@@ -973,6 +975,50 @@ def test_loft_distribute_uvs_between_edges_or_uvs_poly_sphere(
         436,
         437,
         438,
+    }
+
+
+def test_iter_aligned_contiguous_edges_poly_plane(poly_plane: str) -> None:
+    """
+    Test re-alignment of edge loop segments which are imperfectly aligned
+    """
+    assert poly_plane == "polyPlane"
+    assert set(
+        chain(
+            *iter_aligned_contiguous_edges(
+                "polyPlane.e[81]",
+                "polyPlane.e[102]",
+                "polyPlane.e[123]",
+                "polyPlane.e[144]",
+                "polyPlane.e[165]",
+                "polyPlane.e[47]",
+                "polyPlane.e[68]",
+                "polyPlane.e[89]",
+                "polyPlane.e[110]",
+                "polyPlane.e[131]",
+                "polyPlane.e[152]",
+                "polyPlane.e[53]",
+                "polyPlane.e[74]",
+                "polyPlane.e[95]",
+                "polyPlane.e[116]",
+                "polyPlane.e[137]",
+                "polyPlane.e[158]",
+                "polyPlane.e[179]",
+            )
+        )
+    ) == {
+        "polyPlane.e[81]",
+        "polyPlane.e[89]",
+        "polyPlane.e[95]",
+        "polyPlane.e[102]",
+        "polyPlane.e[110]",
+        "polyPlane.e[116]",
+        "polyPlane.e[123]",
+        "polyPlane.e[131]",
+        "polyPlane.e[137]",
+        "polyPlane.e[144]",
+        "polyPlane.e[152]",
+        "polyPlane.e[158]",
     }
 
 

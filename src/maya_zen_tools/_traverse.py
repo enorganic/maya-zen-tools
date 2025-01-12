@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from functools import cache
-from itertools import islice
+from itertools import chain, islice
 from math import sqrt
 from typing import Iterable, Sequence
 
@@ -1301,7 +1301,7 @@ def _iter_align_closed_loop_contiguous_uvs(
         yield uv_loop
 
 
-def iter_aligned_contiguous_edges(
+def iter_aligned_contiguous_edges(  # noqa: C901
     *selected_edges: str,
 ) -> Iterable[tuple[str, ...]]:
     """
@@ -1340,6 +1340,7 @@ def iter_aligned_contiguous_edges(
     origin_vertex: str | None = None
     segment_terminal_vertices: tuple[str, ...]
     start_vertices_edges: dict[str, tuple[str, ...]] = {}
+    index: int
     for index, segment_terminal_vertices in enumerate(
         map(_get_contiguous_edges_terminal_vertices, edge_loop_segments)
     ):
@@ -1365,10 +1366,58 @@ def iter_aligned_contiguous_edges(
                 # segment was inverted, so we reverse it
                 else reversed(edge_loop_segments[index])
             )
+    # Since it's now unused, we will re-populate `edge_loop_segments`
+    # with sorted edge loops
+    edge_loop_segments.clear()
+    edge_loop_ids: list[set[int]] = []
     # Sort the edge loops
     start_vertex: str
     for start_vertex in iter_sorted_vertices(start_vertices_edges.keys()):
-        yield start_vertices_edges[start_vertex]
+        edge_loop_segment: tuple[str, ...] = start_vertices_edges[start_vertex]
+        edge_loop_segments.append(edge_loop_segment)
+        edge_loop_ids.append(set(map(get_component_id, edge_loop_segment)))
+    # Trim edges which don't have a corresponding edge (one on the same ring)
+    # on all other segments
+    shape: str = get_components_shape(chain(*edge_loop_segments))
+    length: int = len(edge_loop_segments)
+    for index, edge_loop_segment in enumerate(edge_loop_segments):
+        start_index: int = 0
+        stop_index: int | None = None
+        segment_length: int = len(edge_loop_segment)
+        segment_index: int
+        edge: str
+        ring_edge_ids: set[int]
+        matched: bool
+        other_index: int
+        for segment_index, edge in enumerate(edge_loop_segment):
+            ring_edge_ids = set(
+                cmds.polySelect(shape, edgeRing=get_component_id(edge))
+            )
+            matched = True
+            for other_index in range(length):
+                if other_index == index:
+                    continue
+                if not ring_edge_ids & edge_loop_ids[other_index]:
+                    matched = False
+                    break
+            if matched:
+                start_index = segment_index
+                break
+        for segment_index, edge in enumerate(reversed(edge_loop_segment)):
+            ring_edge_ids = set(
+                cmds.polySelect(shape, edgeRing=get_component_id(edge))
+            )
+            matched = True
+            for other_index in range(length):
+                if other_index == index:
+                    continue
+                if not ring_edge_ids & edge_loop_ids[other_index]:
+                    matched = False
+                    break
+            if matched:
+                stop_index = segment_length - segment_index
+                break
+        yield edge_loop_segment[start_index:stop_index]
 
 
 def iter_aligned_contiguous_uvs(
