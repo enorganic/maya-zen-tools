@@ -4,7 +4,7 @@
 
 1.  Clone and Install
 
-    To install this project for development of *this library*,
+    To install this project for development of *this package*,
     clone this repository (replacing "~/Code", below, with the directory
     under which you want your project to reside), then run `make`:
 
