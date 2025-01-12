@@ -17,7 +17,8 @@ mayapy: str = str(
 );
 check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"]);
 from maya_zen_tools import install, startup;
-install.main()
+install.main();
+startup.main()
 ```
 
 -   In Maya, select the "modeling" menu set. You can do this from the top-left
