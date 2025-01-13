@@ -43,7 +43,8 @@ sources = ["src"]
 dependencies = [
     "pytest",
     "mypy",
-    "dependence~=1.0"
+    "dependence~=1.0",
+    "gittable~=0.0"
 ]
 program_name = "mayapy"
 pre-install-commands = [
