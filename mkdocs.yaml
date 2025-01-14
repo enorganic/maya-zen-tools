@@ -26,6 +26,7 @@ nav:
   - options: 'api/options.md'
   - startup: 'api/startup.md'
 - Contributing: 'contributing.md'
+- Report a Bug: https://github.com/enorganic/maya-zen-tools/issues
 theme:
   name: material
   color_mode: auto
