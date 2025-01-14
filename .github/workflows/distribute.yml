@@ -34,6 +34,4 @@ jobs:
         HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
         HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
       run: make distribute
-    - name: Build and deploy documentation
-      run: hatch run docs:mkdocs gh-deploy --force
 

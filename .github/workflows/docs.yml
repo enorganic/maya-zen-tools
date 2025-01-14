@@ -1,0 +1,19 @@
+name: docs
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - main
+    paths:
+    - docs
+    - mkdocs.yaml
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Hatch
+      uses: pypa/hatch@install
+    - name: Build and deploy documentation
+      run: hatch run docs:mkdocs gh-deploy --force
+
