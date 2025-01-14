@@ -49,11 +49,22 @@ def _get_vertices_locator_scale(vertices: Sequence[str]) -> float:
     Parameters:
         vertices: A list of vertices.
     """
+    bounding_box: tuple[float, float, float, float, float, float] = tuple(
+        cmds.exactWorldBoundingBox(*vertices)
+    )
     edges: tuple[str] = cmds.ls(
         *cmds.polyListComponentConversion(*vertices, toEdge=True), flatten=True
     )
     average_edge_length: float = sum(map(cmds.arclen, edges)) / len(edges)
-    return average_edge_length / 3
+    return max(
+        average_edge_length / 3,
+        max(
+            abs(bounding_box[3] - bounding_box[0]),
+            abs(bounding_box[4] - bounding_box[1]),
+            abs(bounding_box[5] - bounding_box[2]),
+        )
+        / 10,
+    )
 
 
 def _create_curve_from_vertices(
@@ -75,13 +86,13 @@ def _create_curve_from_vertices(
         create_locators: If `True`, create locators for manipulating the curve.
         close: If `True`, the curve will form a closed loop.
     """
-    transform: str = cmds.createNode(
-        "transform", name="zenLoopCurve#", skipSelect=True
+    curve_transform: str = cmds.createNode(
+        "transform", name="wire#", skipSelect=True
     )
-    shape: str = cmds.createNode(
+    curve_shape: str = cmds.createNode(
         "nurbsCurve",
-        name="zenLoopCurveShape#",
-        parent=transform,
+        name=f"{curve_transform}Shape",
+        parent=curve_transform,
         skipSelect=True,
     )
     locator_scale: float = _get_vertices_locator_scale(vertices)
@@ -100,6 +111,7 @@ def _create_curve_from_vertices(
                         translate=translation,
                         scale=locator_scale,
                         connect_translate=f"{arc}.point{index}",
+                        parent=curve_transform,
                     )
                 )
             else:
@@ -107,7 +119,7 @@ def _create_curve_from_vertices(
                     f"{arc}.point{index}",
                     *translation,
                 )
-        cmds.connectAttr(f"{arc}.outputCurve", f"{shape}.create")
+        cmds.connectAttr(f"{arc}.outputCurve", f"{curve_shape}.create")
     else:
         loft: str = cmds.createNode("loft")
         curve_from_surface_iso: str = cmds.createNode("curveFromSurfaceIso")
@@ -142,13 +154,13 @@ def _create_curve_from_vertices(
                 loft_curve_transform, shapes=True, noIntermediate=True
             )[0]
             cmds.parent(
-                loft_curve_shape, transform, addObject=True, shape=True
+                loft_curve_shape, curve_transform, addObject=True, shape=True
             )
             cmds.delete(loft_curve_transform)
             # Connect the inverse matrix from our transform node to the
             # in-matrix of the point matrix multipliers
             cmds.connectAttr(
-                f"{transform}.worldInverseMatrix",
+                f"{curve_transform}.worldInverseMatrix",
                 f"{point_matrix_mult}.inMatrix",
             )
             # Connect the point matrix multiplier to the loft curve control
@@ -170,9 +182,9 @@ def _create_curve_from_vertices(
             f"{loft}.outputSurface", f"{curve_from_surface_iso}.inputSurface"
         )
         cmds.connectAttr(
-            f"{curve_from_surface_iso}.outputCurve", f"{shape}.create"
+            f"{curve_from_surface_iso}.outputCurve", f"{curve_shape}.create"
         )
-    return (transform, shape, *locators)
+    return (curve_transform, curve_shape, *locators)
 
 
 def _create_curve_from_uvs(
@@ -325,7 +337,9 @@ def _distribute_vertices_loop_along_curve(
     )
     # Rebuild the curve
     rebuild_curve: str = cmds.createNode("rebuildCurve")
-    cmds.connectAttr(f"{curve_shape}.local", f"{rebuild_curve}.inputCurve")
+    cmds.connectAttr(
+        f"{curve_shape}.worldSpace[0]", f"{rebuild_curve}.inputCurve"
+    )
     cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
     cmds.setAttr(f"{rebuild_curve}.spans", len(selected_vertices) - 1)
     cmds.setAttr(
@@ -379,12 +393,13 @@ def _distribute_vertices_loop_along_curve(
         )
         cmds.setAttr(f"{curve_shape}.intermediateObject", 0)
         cmds.setAttr(f"{rebuilt_curve}.intermediateObject", 1)
+        cmds.setAttr(f"{curve_shape}.visibility", 0)
         # Disconnect the wire base from history, so that changes to the
         # wire aren't negated
         cmds.evalDeferred(
-            "cmds.disconnectAttr("
-            f'"{rebuild_curve}.outputCurve", "{rebuilt_curve}.create"'
-            ")"
+            lambda: cmds.disconnectAttr(
+                f"{rebuild_curve}.outputCurve", f"{rebuilt_curve}.create"
+            )
         )
         return rebuilt_curve, tuple(map(itemgetter(0), vertices_positions))
     cmds.delete(rebuild_curve)
@@ -694,7 +709,7 @@ def curve_distribute_vertices(
     cmds.selectMode(object=True)
     # Select a center locator, if there are more than two, otherwise select
     # an end locator
-    cmds.select(locators[ceil(len(locators) / 2)])
+    cmds.select(locators[ceil(len(locators) / 2) - 1])
     cmds.waitCursor(state=False)
     return edges
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 from functools import partial
 from itertools import chain
+from math import ceil
 from typing import Callable, Iterable
 
 from maya import cmds  # type: ignore
@@ -12,6 +13,7 @@ from maya_zen_tools._create import (
     create_edges_rebuild_curve,
     create_uvs_rebuild_curve,
 )
+from maya_zen_tools._transform import center_pivot
 from maya_zen_tools._traverse import (
     get_component_id,
     get_components_shape,
@@ -178,6 +180,31 @@ def _iter_edges_ring(
     return zip(*edge_rings)
 
 
+def _create_wrap_deformer(
+    deform_surface_attribute: str,
+    base_surface_attribute: str,
+    vertices: Iterable[str],
+) -> str:
+    """
+    Create a wire deformer to manipulate specified vertices.
+    """
+    vertices = tuple(vertices)
+    wrap: str = cmds.proximityWrap(
+        vertices,
+    )[0]
+    cmds.connectAttr(
+        base_surface_attribute,
+        f"{wrap}.drivers[0].driverBindGeometry",
+        force=True,
+    )
+    cmds.connectAttr(
+        deform_surface_attribute,
+        f"{wrap}.drivers[0].driverGeometry",
+        force=True,
+    )
+    return wrap
+
+
 def loft_distribute_vertices_between_edges(
     *selected_edges: str,
     distribution_type: str = options.DistributionType.UNIFORM,
@@ -188,7 +215,7 @@ def loft_distribute_vertices_between_edges(
     another on a polygon mesh, distribute the vertices sandwiched between
     along a loft.
     """
-    cleanup: list[str] = []
+    cleanup_items: list[str] = []
     selected_edges = selected_edges or tuple(iter_selected_components("e"))
     selected_edge_loops: tuple[tuple[str, ...], ...] = tuple(
         iter_aligned_contiguous_edges(*selected_edges)
@@ -196,17 +223,39 @@ def loft_distribute_vertices_between_edges(
     cmds.waitCursor(state=True)
     index: int
     edge_loop: tuple[str, ...]
-    loft: str = cmds.createNode("loft", name="loftBetweenEdges#")
+    curve_transforms: list[str] = []
+    curve_shapes: list[str] = []
+    loft: str = cmds.createNode("loft", name="loft#")
     for index, edge_loop in enumerate(selected_edge_loops):
         rebuild_curve: str = create_edges_rebuild_curve(edge_loop)
-        cmds.connectAttr(
-            f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
-        )
-        cleanup.append(rebuild_curve)
+        if create_deformer:
+            curve_transform: str = cmds.createNode(
+                "transform", name="loftCurve#", skipSelect=True
+            )
+            curve_shape: str = cmds.createNode(
+                "nurbsCurve",
+                name="loftCurveShape#",
+                parent=curve_transform,
+                skipSelect=True,
+            )
+            cmds.connectAttr(
+                f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
+            )
+            center_pivot(curve_transform)
+            cmds.connectAttr(
+                f"{curve_shape}.worldSpace[0]", f"{loft}.inputCurve[{index}]"
+            )
+            curve_transforms.append(curve_transform)
+            curve_shapes.append(curve_shape)
+        else:
+            cmds.connectAttr(
+                f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
+            )
+        cleanup_items.append(rebuild_curve)
     rebuild_surface: str = cmds.createNode(
         "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
     )
-    cleanup.append(rebuild_surface)
+    cleanup_items.append(rebuild_surface)
     cmds.connectAttr(
         f"{loft}.outputSurface",
         f"{rebuild_surface}.inputSurface",
@@ -231,7 +280,7 @@ def loft_distribute_vertices_between_edges(
     )
     if create_deformer:
         surface_transform: str = cmds.createNode(
-            "transform", name="loftBetweenEdgesSurface#"
+            "transform", name="loftBetweenEdges#"
         )
         surface_shape: str = cmds.createNode(
             "nurbsSurface",
@@ -247,14 +296,33 @@ def loft_distribute_vertices_between_edges(
             f"{surface_shape}.create",
             force=True,
         )
-        cmds.delete(surface_shape, constructionHistory=True)
-        wrap: str = cmds.proximityWrap(
+        cmds.setAttr(f"{surface_shape}.intermediateObject", 1)
+        cmds.parent(*curve_transforms, surface_transform)
+        wrap: str = _create_wrap_deformer(
+            f"{rebuild_surface}.outputSurface",
+            f"{surface_shape}.local",
             vertices,
         )
-        cmds.proximityWrap(wrap, edit=True, addDrivers=[surface_shape])
+
+        def cleanup() -> None:
+            """
+            Disconnect the curves from the mesh, and the rebuilt surface
+            from the base, so that changes aren't negated by having a base
+            transform in concert with the driver
+            """
+            cmds.delete(*curve_shapes, constructionHistory=True)
+            cmds.disconnectAttr(
+                f"{rebuild_surface}.outputSurface", f"{surface_shape}.create"
+            )
+
+        cmds.evalDeferred(cleanup)
         cmds.waitCursor(state=False)
+        # Go into object selection mode, in order to manipulate locators
+        cmds.selectMode(object=True)
+        # Select the middle locator
+        cmds.select(curve_transforms[ceil(len(curve_transforms) / 2) - 1])
         return (faces, surface_shape, surface_transform, wrap)
-    cmds.delete(*cleanup)
+    cmds.delete(*cleanup_items)
     cmds.waitCursor(state=False)
     cmds.select(*faces)
     return faces

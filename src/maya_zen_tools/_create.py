@@ -18,6 +18,7 @@ def create_locator(
     translate: tuple[float, float, float] | None = None,
     scale: float = 1.0,
     connect_translate: str | tuple[str] | None = None,
+    parent: str = "",
 ) -> str:
     """
     Create a locator at the given translation.
@@ -26,7 +27,7 @@ def create_locator(
         translation: The translation of the locator.
         scale: The scale of the locator.
     """
-    locator: str = cmds.spaceLocator(name="zenLoopLocator#")[0]
+    locator: str = cmds.spaceLocator(name="wireLocator#")[0]
     cmds.setAttr(f"{locator}.translate", *translate)
     locator_shape: str = cmds.listRelatives(
         locator, shapes=True, noIntermediate=True
@@ -41,6 +42,8 @@ def create_locator(
                 f"{locator}.translate",
                 connect_translate_to,
             )
+    if parent:
+        cmds.parent(locator, parent)
     return locator
 
 
