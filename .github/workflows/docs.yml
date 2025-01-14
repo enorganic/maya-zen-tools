@@ -5,8 +5,9 @@ on:
     branches:
     - main
     paths:
-    - docs
+    - docs/**
     - mkdocs.yaml
+    - .github/workflows/docs.yml
 jobs:
   distribute:
     runs-on: ubuntu-latest
