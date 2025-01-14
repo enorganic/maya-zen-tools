@@ -4,8 +4,7 @@
 ## Script Editor Installation
 
 You can install ZenTools for Maya by copy/pasting the following python snippet
-into your script editor (the semicolons are necessary in order to avoid
-opening the multi-line script editor):
+into your script editor:
 
 ```python
 import os;
