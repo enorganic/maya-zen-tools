@@ -189,7 +189,7 @@ def iter_sort_uvs_by_distance(
             # If there are no bordering UVs, any remaining UVs
             # must belong to a part of the mesh which cannot be reached
             # by edge traversal, and is therefore disconnected
-            raise NonContiguousMeshSelectionError(set(origin_uv) | other_uvs)
+            raise NonContiguousMeshSelectionError({origin_uv} | other_uvs)
         matched_uvs = bordering_uvs & other_uvs
         if matched_uvs:
             yield from matched_uvs
@@ -1436,7 +1436,8 @@ def iter_aligned_contiguous_uvs(
     """
     Given one or more groups of UVs which are contiguous in the UV space,
     yield a tuple containing each set of contiguous UVs,
-    directionally aligned.
+    directionally aligned. If one of the contiguous UV sets is not on the
+    same mesh as the rest, it will be discarded/ignored.
     """
     uv_loop_segments: list[tuple[str, ...]] = list(
         iter_contiguous_uvs(*selected_uvs)
@@ -1672,7 +1673,8 @@ def iter_contiguous_uvs(  # noqa: C901
     *selected_uvs: str,
 ) -> Iterable[tuple[str, ...]]:
     """
-    Yield tuples of UV loop segment, each of which are contiguous.
+    Yield tuples of UV loop segment, each of which are contiguous, and all
+    of which reside on the same UV shell.
 
     Parameters:
         selected_uvs: Two or more UV loop segments comprised of equal
@@ -1682,6 +1684,9 @@ def iter_contiguous_uvs(  # noqa: C901
     uvs: set[str] = set(selected_uvs)
     uv_loop_segments: list[list[str]] = []
     uv_loop_segment: list[str]
+    # This list stores one UV ID per/loop, in order to subsequently determine
+    # if any don't share a UV shell
+    representative_uv_ids: list[int | None] = []
     # Organize edges into contiguous segments
     while uvs:
         uv: str = uvs.pop()
@@ -1710,6 +1715,7 @@ def iter_contiguous_uvs(  # noqa: C901
                             + uv_loop_segments[found]
                         )
                     uv_loop_segment.clear()
+                    representative_uv_ids[index] = None
                     break
             if uv_loop_segment[-1] in adjacent_uvs:
                 # This UV is adjacent to the last UV in the segment
@@ -1728,10 +1734,36 @@ def iter_contiguous_uvs(  # noqa: C901
                             list(uv_loop_segment) + uv_loop_segments[found]
                         )
                     uv_loop_segment.clear()
+                    representative_uv_ids[index] = None
                     break
         if found is None:
             # This UV is not adjacent to any segments started thus far
             uv_loop_segments.append([uv])
+            representative_uv_ids.append(get_component_id(uv))
+    # If there are more than 2 UV loop segments, check to see if one is an
+    # orphan, and abandon any orphans
+    if len(uv_loop_segments) > 2:  # noqa: PLR2004
+        shape: str = get_components_shape(selected_uvs)
+        # Clear UV loops which aren't on the same shell as the rest
+        uv_id: int | None
+        other_index: int
+        other_uv_id: int | None
+        for index, uv_id in enumerate(representative_uv_ids):
+            if uv_id is None:
+                continue
+            found_path: bool = False
+            for other_index, other_uv_id in enumerate(representative_uv_ids):
+                if other_uv_id is None:
+                    continue
+                if index == other_index:
+                    continue
+                if cmds.polySelect(
+                    shape, shortestEdgePathUV=(uv_id, other_uv_id), query=True
+                ):
+                    found_path = True
+                    break
+            if not found_path:
+                uv_loop_segments[index].clear()
     # Remove the cleared segments (they've been joined with another)
     yield from map(tuple, filter(None, uv_loop_segments))
 
