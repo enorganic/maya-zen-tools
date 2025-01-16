@@ -6,7 +6,7 @@
 
 ZenTools for Maya is a set of modeling tools for manipulating a polygon mesh
 using dynamically created NURBS curves and surfaces to distribute vertices
-and/or UVs.
+and/or UVs, plus some selection tools to complement the workflow.
 
 - [Documentation](https://maya-zen-tools.enorganic.org)
 - [Contributing](https://maya-zen-tools.enorganic.org/contributing) (to the development of this package)

@@ -507,6 +507,8 @@ def select_edges_between_vertices(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    if not use_selection_order:
+        close = False
     # If vertices are not explicitly passed, we get them by
     # flattening the current selection of vertices
     selected_vertices = selected_vertices or tuple(
@@ -558,6 +560,8 @@ def select_edges_between_uvs(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    if not use_selection_order:
+        close = False
     # If UVs are not explicitly passed, we get them by
     # flattening the current selection of UVs
     selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
@@ -605,6 +609,8 @@ def select_between_uvs(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    if not use_selection_order:
+        close = False
     # If UVs are not explicitly passed, we get them by
     # flattening the current selection of UVs
     selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
@@ -662,6 +668,8 @@ def curve_distribute_vertices(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    if not use_selection_order:
+        close = False
     # Store the original selection
     selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
     # If vertices are not explicitly passed, we get them by
@@ -750,6 +758,8 @@ def curve_distribute_uvs(
         use_selection_order = cmds.selectPref(
             trackSelectionOrder=True, query=True
         )
+    if not use_selection_order:
+        close = False
     # Store the original selection
     selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
     # If UVs are not explicitly passed, we get them by

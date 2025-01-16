@@ -18,4 +18,5 @@ pip-wheel-metadata
 !.flake8
 !.markdownlint.yaml
 !.editorconfig
+!.gitattributes
 site

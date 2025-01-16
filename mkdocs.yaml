@@ -26,6 +26,8 @@ nav:
   - options: 'api/options.md'
   - startup: 'api/startup.md'
 - Contributing: 'contributing.md'
+- Report a Bug: https://github.com/enorganic/maya-zen-tools/issues
+- Sponsor this Project: https://www.patreon.com/posts/zen-tools-for-120020825
 theme:
   name: material
   color_mode: auto
