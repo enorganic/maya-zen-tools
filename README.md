@@ -11,4 +11,4 @@ and/or UVs, plus some selection tools to complement the workflow.
 - [Documentation](https://maya-zen-tools.enorganic.org)
 - [Contributing](https://maya-zen-tools.enorganic.org/contributing) (to the development of this package)
 
-![ZenTools for Maya Demo](docs/assets/images/maya-zen-tools-demo.gif)
+![ZenTools for Maya Demo](https://maya-zen-tools.enorganic.org/assets/images/maya-zen-tools-demo.gif)
