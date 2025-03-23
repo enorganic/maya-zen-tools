@@ -346,17 +346,32 @@ def get_component_id(component: str) -> int:
     return int(component.rpartition("[")[-1].rpartition("]")[0])
 
 
+def get_component_shape(component: str) -> str | None:
+    """
+    If `selection` is a polygon component, return the shape,
+    otherwise, return `None`.
+    """
+    shape: str
+    component_type: str
+    shape, component_type = component.partition("[")[0].rpartition(".")[::2]
+    return (
+        shape
+        if component_type in {"vtx", "map", "e", "vtxFace", "f"}
+        else None
+    )
+
+
 def get_components_shape(components: Iterable[str]) -> str:
     """
     Given a set of components, return the shape name, or raise an error
     if there is more than one shape
     """
-    shapes: list[str] = cmds.ls(*components, objectsOnly=True, flatten=True)
+    shapes: set[str] = set(filter(None, map(get_component_shape, components)))
     if len(shapes) > 1:
-        raise TooManyShapesError(shapes)
+        raise TooManyShapesError(tuple(sorted(shapes)))
     if not shapes:
         raise InvalidSelectionError(components)
-    return shapes[0]
+    return shapes.pop()
 
 
 def get_shape_transform(shape: str) -> str:
@@ -387,23 +402,12 @@ def iter_selected_components(
     Yield selected components, in selection order.
 
     Parameters:
-        component_types: vtx | e | map | vertex | edge | uv
+        component_types: vtx | e | map | vtxFace | f
         selection: A flat selection sequence. If not provided,
             `maya.cmds.ls` will be used.
     """
     component_type: str
-    component_types_: set[str] = {
-        "f"
-        if component_type == "face"
-        else "vtx"
-        if component_type == "vertex"
-        else "e"
-        if component_type == "edge"
-        else "map"
-        if component_type == "uv"
-        else component_type
-        for component_type in component_types
-    }
+    component_types_: set[str] = set(component_types)
     selected: str
     component: str
     selected_object: str
