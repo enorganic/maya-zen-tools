@@ -30,8 +30,8 @@ nav:
 - Sponsor this Project: https://www.patreon.com/posts/zen-tools-for-120020825
 theme:
   name: material
-  favicon: assets/images/zen-tools-icon.svg
-  logo: assets/images/zen-tools-icon.svg
+  favicon: assets/images/zen-tools-logo.svg
+  logo: assets/images/zen-tools-logo.svg
   color_mode: auto
   user_color_mode_toggle: true
   locale: en

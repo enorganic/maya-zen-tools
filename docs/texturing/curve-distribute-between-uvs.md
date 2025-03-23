@@ -3,7 +3,7 @@
 ## Default Options
 
 With the default options, "Curve Distribute Between UVs" will distribute
-UVs forming path between your selected UVs along a (dynamically created and
+UVs forming a path between your selected UVs along a (dynamically created and
 not retained) NURBS curve passing between the UVs you've selected:
 
 <p><video src="../../assets/videos/curve-distribute-between-uvs.mp4" controls=true /></p>
