@@ -533,7 +533,8 @@ def select_edges_between_vertices(
         # Deselect vertices
         cmds.select(selected_vertices, deselect=True)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return edges
 
 
@@ -631,7 +632,8 @@ def select_between_uvs(
         # Select edges
         cmds.select(*uvs, add=True)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return uvs
 
 
@@ -720,7 +722,8 @@ def curve_distribute_vertices(
             cmds.select(*selection)
             cmds.select(*edges, add=True)
             cmds.select(selected_vertices, deselect=True)
-            cmds.waitCursor(state=False)
+            if cmds.waitCursor(query=True, state=True):
+                cmds.waitCursor(state=False)
             return edges
         # Go into object selection mode, in order to manipulate locators
         cmds.selectMode(object=True)
@@ -728,7 +731,8 @@ def curve_distribute_vertices(
         # an end locator
         cmds.select(locators[ceil(len(locators) / 2) - 1])
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return edges
 
 
@@ -801,7 +805,8 @@ def curve_distribute_uvs(
         cmds.delete(curve_transform)
         cmds.select(*selection, *uvs, add=True)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return edges
 
 

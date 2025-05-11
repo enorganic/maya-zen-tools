@@ -145,5 +145,6 @@ def flood_select(*selection: str) -> tuple[str, ...]:
         )
         cmds.select(*selected_components, add=True)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return selected_components

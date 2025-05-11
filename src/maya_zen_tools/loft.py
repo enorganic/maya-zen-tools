@@ -329,7 +329,8 @@ def loft_distribute_vertices_between_edges(
         cmds.delete(*cleanup_items)
         cmds.select(*faces)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return faces
 
 
@@ -409,7 +410,8 @@ def loft_distribute_uvs_between_edges_or_uvs(
         cmds.delete(*cleanup)
         cmds.select(*faces)
     finally:
-        cmds.waitCursor(state=False)
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return faces
 
 
