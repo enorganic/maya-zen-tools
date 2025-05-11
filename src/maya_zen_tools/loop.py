@@ -501,37 +501,39 @@ def select_edges_between_vertices(
         A tuple of the selected edges.
     """
     cmds.waitCursor(state=True)
-    if use_selection_order:
-        # Check to make sure that selection order is being tracked, and fall
-        # back to automatic sorting if not.
-        use_selection_order = cmds.selectPref(
-            trackSelectionOrder=True, query=True
+    try:
+        if use_selection_order:
+            # Check to make sure that selection order is being tracked, and
+            # fall back to automatic sorting if not.
+            use_selection_order = cmds.selectPref(
+                trackSelectionOrder=True, query=True
+            )
+        if not use_selection_order:
+            close = False
+        # If vertices are not explicitly passed, we get them by
+        # flattening the current selection of vertices
+        selected_vertices = selected_vertices or tuple(
+            iter_selected_components("vtx")
         )
-    if not use_selection_order:
-        close = False
-    # If vertices are not explicitly passed, we get them by
-    # flattening the current selection of vertices
-    selected_vertices = selected_vertices or tuple(
-        iter_selected_components("vtx")
-    )
-    if not use_selection_order:
-        # If we have opted not to use selection order, or are unable to because
-        # it is not being tracked, we fall back to auomatic sorting
-        selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
-    edges: tuple[str, ...] = tuple(
-        iter_vertices_edges(
-            iter_shortest_vertices_path(
-                (*selected_vertices, selected_vertices[0])
-                if close
-                else selected_vertices
+        if not use_selection_order:
+            # If we have opted not to use selection order, or are unable to
+            # because it is not being tracked, we fall back to auomatic sorting
+            selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
+        edges: tuple[str, ...] = tuple(
+            iter_vertices_edges(
+                iter_shortest_vertices_path(
+                    (*selected_vertices, selected_vertices[0])
+                    if close
+                    else selected_vertices
+                )
             )
         )
-    )
-    # Select edges
-    cmds.select(*edges, add=True)
-    # Deselect vertices
-    cmds.select(selected_vertices, deselect=True)
-    cmds.waitCursor(state=False)
+        # Select edges
+        cmds.select(*edges, add=True)
+        # Deselect vertices
+        cmds.select(selected_vertices, deselect=True)
+    finally:
+        cmds.waitCursor(state=False)
     return edges
 
 
@@ -554,33 +556,35 @@ def select_edges_between_uvs(
         A tuple of the selected edges.
     """
     cmds.waitCursor(state=True)
-    if use_selection_order:
-        # Check to make sure that selection order is being tracked, and fall
-        # back to automatic sorting if not.
-        use_selection_order = cmds.selectPref(
-            trackSelectionOrder=True, query=True
-        )
-    if not use_selection_order:
-        close = False
-    # If UVs are not explicitly passed, we get them by
-    # flattening the current selection of UVs
-    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
-    if not use_selection_order:
-        # If we have opted not to use selection order, or are unable to because
-        # it is not being tracked, we fall back to auomatic sorting
-        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
-    edges: tuple[str, ...] = tuple(
-        iter_uvs_edges(
-            iter_shortest_uvs_path(
-                (*selected_uvs, selected_uvs[0]) if close else selected_uvs
+    try:
+        if use_selection_order:
+            # Check to make sure that selection order is being tracked, and
+            # fall back to automatic sorting if not.
+            use_selection_order = cmds.selectPref(
+                trackSelectionOrder=True, query=True
+            )
+        if not use_selection_order:
+            close = False
+        # If UVs are not explicitly passed, we get them by
+        # flattening the current selection of UVs
+        selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+        if not use_selection_order:
+            # If we have opted not to use selection order, or are unable to
+            # because it is not being tracked, we fall back to auomatic sorting
+            selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+        edges: tuple[str, ...] = tuple(
+            iter_uvs_edges(
+                iter_shortest_uvs_path(
+                    (*selected_uvs, selected_uvs[0]) if close else selected_uvs
+                )
             )
         )
-    )
-    # Select edges
-    cmds.select(*edges, add=True)
-    # Deselect UVs
-    cmds.select(selected_uvs, deselect=True)
-    cmds.waitCursor(state=False)
+        # Select edges
+        cmds.select(*edges, add=True)
+        # Deselect UVs
+        cmds.select(selected_uvs, deselect=True)
+    finally:
+        cmds.waitCursor(state=False)
     return edges
 
 
@@ -603,29 +607,31 @@ def select_between_uvs(
         A tuple of the selected UVs.
     """
     cmds.waitCursor(state=True)
-    if use_selection_order:
-        # Check to make sure that selection order is being tracked, and fall
-        # back to automatic sorting if not.
-        use_selection_order = cmds.selectPref(
-            trackSelectionOrder=True, query=True
+    try:
+        if use_selection_order:
+            # Check to make sure that selection order is being tracked, and
+            # fall back to automatic sorting if not.
+            use_selection_order = cmds.selectPref(
+                trackSelectionOrder=True, query=True
+            )
+        if not use_selection_order:
+            close = False
+        # If UVs are not explicitly passed, we get them by
+        # flattening the current selection of UVs
+        selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+        if not use_selection_order:
+            # If we have opted not to use selection order, or are unable to
+            # because it is not being tracked, we fall back to auomatic sorting
+            selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+        uvs: tuple[str, ...] = tuple(
+            iter_shortest_uvs_path(
+                (*selected_uvs, selected_uvs[0]) if close else selected_uvs
+            )
         )
-    if not use_selection_order:
-        close = False
-    # If UVs are not explicitly passed, we get them by
-    # flattening the current selection of UVs
-    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
-    if not use_selection_order:
-        # If we have opted not to use selection order, or are unable to because
-        # it is not being tracked, we fall back to auomatic sorting
-        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
-    uvs: tuple[str, ...] = tuple(
-        iter_shortest_uvs_path(
-            (*selected_uvs, selected_uvs[0]) if close else selected_uvs
-        )
-    )
-    # Select edges
-    cmds.select(*uvs, add=True)
-    cmds.waitCursor(state=False)
+        # Select edges
+        cmds.select(*uvs, add=True)
+    finally:
+        cmds.waitCursor(state=False)
     return uvs
 
 
@@ -662,63 +668,67 @@ def curve_distribute_vertices(
         `create_deformer == False`).
     """
     cmds.waitCursor(state=True)
-    if use_selection_order:
-        # Check to make sure that selection order is being tracked, and fall
-        # back to automatic sorting if not.
-        use_selection_order = cmds.selectPref(
-            trackSelectionOrder=True, query=True
+    try:
+        if use_selection_order:
+            # Check to make sure that selection order is being tracked, and
+            # fall back to automatic sorting if not.
+            use_selection_order = cmds.selectPref(
+                trackSelectionOrder=True, query=True
+            )
+        if not use_selection_order:
+            close = False
+        # Store the original selection
+        selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
+        # If vertices are not explicitly passed, we get them by
+        # flattening the current selection of vertices
+        selected_vertices = selected_vertices or tuple(
+            iter_selected_components("vtx")
         )
-    if not use_selection_order:
-        close = False
-    # Store the original selection
-    selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
-    # If vertices are not explicitly passed, we get them by
-    # flattening the current selection of vertices
-    selected_vertices = selected_vertices or tuple(
-        iter_selected_components("vtx")
-    )
-    # Raise an error if selected vertices span more than one mesh
-    get_components_shape(selected_vertices)
-    if not use_selection_order:
-        # If we have opted not to use selection order, or are unable to because
-        # it is not being tracked, we fall back to auomatic sorting
-        selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
-    # Create the Curve
-    curve_transform: str
-    curve_shape: str
-    locators: list[str]
-    curve_transform, curve_shape, *locators = _create_curve_from_vertices(
-        selected_vertices, create_locators=create_deformer, close=close
-    )
-    # Distribute Vertices Along the Curve
-    vertices: tuple[str, ...]
-    curve_shape, vertices = _distribute_vertices_loop_along_curve(
-        (
-            (*selected_vertices, selected_vertices[0])
-            if close
-            else selected_vertices
-        ),
-        curve_shape,
-        curve_transform,
-        distribution_type=distribution_type,
-        create_deformer=create_deformer,
-    )
-    edges: tuple[str, ...] = tuple(iter_vertices_edges(vertices))
-    if not create_deformer:
-        # Cleanup the curve and history if not needed for creating a deformer
-        cmds.delete(curve_shape, constructionHistory=True)
-        cmds.delete(curve_transform, constructionHistory=True)
-        cmds.delete(curve_transform)
-        cmds.select(*selection)
-        cmds.select(*edges, add=True)
-        cmds.select(selected_vertices, deselect=True)
-        return edges
-    # Go into object selection mode, in order to manipulate locators
-    cmds.selectMode(object=True)
-    # Select a center locator, if there are more than two, otherwise select
-    # an end locator
-    cmds.select(locators[ceil(len(locators) / 2) - 1])
-    cmds.waitCursor(state=False)
+        # Raise an error if selected vertices span more than one mesh
+        get_components_shape(selected_vertices)
+        if not use_selection_order:
+            # If we have opted not to use selection order, or are unable to
+            # because it is not being tracked, we fall back to auomatic sorting
+            selected_vertices = tuple(iter_sorted_vertices(selected_vertices))
+        # Create the Curve
+        curve_transform: str
+        curve_shape: str
+        locators: list[str]
+        curve_transform, curve_shape, *locators = _create_curve_from_vertices(
+            selected_vertices, create_locators=create_deformer, close=close
+        )
+        # Distribute Vertices Along the Curve
+        vertices: tuple[str, ...]
+        curve_shape, vertices = _distribute_vertices_loop_along_curve(
+            (
+                (*selected_vertices, selected_vertices[0])
+                if close
+                else selected_vertices
+            ),
+            curve_shape,
+            curve_transform,
+            distribution_type=distribution_type,
+            create_deformer=create_deformer,
+        )
+        edges: tuple[str, ...] = tuple(iter_vertices_edges(vertices))
+        if not create_deformer:
+            # Cleanup the curve and history if not needed for creating a
+            # deformer
+            cmds.delete(curve_shape, constructionHistory=True)
+            cmds.delete(curve_transform, constructionHistory=True)
+            cmds.delete(curve_transform)
+            cmds.select(*selection)
+            cmds.select(*edges, add=True)
+            cmds.select(selected_vertices, deselect=True)
+            cmds.waitCursor(state=False)
+            return edges
+        # Go into object selection mode, in order to manipulate locators
+        cmds.selectMode(object=True)
+        # Select a center locator, if there are more than two, otherwise select
+        # an end locator
+        cmds.select(locators[ceil(len(locators) / 2) - 1])
+    finally:
+        cmds.waitCursor(state=False)
     return edges
 
 
@@ -752,43 +762,46 @@ def curve_distribute_uvs(
         A tuple of the affected UVs.
     """
     cmds.waitCursor(state=True)
-    if use_selection_order:
-        # Check to make sure that selection order is being tracked, and fall
-        # back to automatic sorting if not.
-        use_selection_order = cmds.selectPref(
-            trackSelectionOrder=True, query=True
+    try:
+        if use_selection_order:
+            # Check to make sure that selection order is being tracked, and
+            # fall back to automatic sorting if not.
+            use_selection_order = cmds.selectPref(
+                trackSelectionOrder=True, query=True
+            )
+        if not use_selection_order:
+            close = False
+        # Store the original selection
+        selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
+        # If UVs are not explicitly passed, we get them by
+        # flattening the current selection of UVs
+        selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
+        # Raise an error if selected UVs span more than one mesh
+        get_components_shape(selected_uvs)
+        if not use_selection_order:
+            # If we have opted not to use selection order, or are unable to
+            # because it is not being tracked, we fall back to auomatic sorting
+            selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
+        # Create the Curve
+        curve_transform: str
+        curve_shape: str
+        curve_transform, curve_shape = _create_curve_from_uvs(
+            selected_uvs, close=close
         )
-    if not use_selection_order:
-        close = False
-    # Store the original selection
-    selection: list[str] = cmds.ls(orderedSelection=True, flatten=True)
-    # If UVs are not explicitly passed, we get them by
-    # flattening the current selection of UVs
-    selected_uvs = selected_uvs or tuple(iter_selected_components("map"))
-    # Raise an error if selected UVs span more than one mesh
-    get_components_shape(selected_uvs)
-    if not use_selection_order:
-        # If we have opted not to use selection order, or are unable to because
-        # it is not being tracked, we fall back to auomatic sorting
-        selected_uvs = tuple(iter_sorted_uvs(selected_uvs))
-    # Create the Curve
-    curve_transform: str
-    curve_shape: str
-    curve_transform, curve_shape = _create_curve_from_uvs(
-        selected_uvs, close=close
-    )
-    # Distribute UVs Along the Curve
-    uvs: tuple[str, ...] = _distribute_uvs_loop_along_curve(
-        ((*selected_uvs, selected_uvs[0]) if close else selected_uvs),
-        curve_shape,
-        distribution_type=distribution_type,
-    )
-    edges: tuple[str, ...] = tuple(iter_uvs_edges(uvs))
-    # Cleanup the curve and history
-    cmds.delete(curve_shape, constructionHistory=True)
-    cmds.delete(curve_transform, constructionHistory=True)
-    cmds.delete(curve_transform)
-    cmds.select(*selection, *uvs, add=True)
+        # Distribute UVs Along the Curve
+        uvs: tuple[str, ...] = _distribute_uvs_loop_along_curve(
+            ((*selected_uvs, selected_uvs[0]) if close else selected_uvs),
+            curve_shape,
+            distribution_type=distribution_type,
+        )
+        edges: tuple[str, ...] = tuple(iter_uvs_edges(uvs))
+        # Cleanup the curve and history
+        cmds.delete(curve_shape, constructionHistory=True)
+        cmds.delete(curve_transform, constructionHistory=True)
+        cmds.delete(curve_transform)
+        cmds.select(*selection, *uvs, add=True)
+    finally:
+        cmds.waitCursor(state=False)
     return edges
 
 
