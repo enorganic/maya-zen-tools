@@ -116,31 +116,35 @@ def flood_select(*selection: str) -> tuple[str, ...]:
     encompass the area enclosed by the selected edges.
     """
     cmds.waitCursor(state=True)
-    selection = selection or tuple(cmds.ls(selection=True, flatten=True))
-    selected_faces: tuple[str, ...] = tuple(
-        iter_selected_components("f", selection=selection)
-    )
-    selected_vertices: tuple[str, ...] = tuple(
-        iter_selected_components("vtx", selection=selection)
-    )
-    selected_uvs: tuple[str, ...] = tuple(
-        iter_selected_components("map", selection=selection)
-    )
-    selected_edges: tuple[str, ...] = tuple(
-        iter_selected_components("e", selection=selection)
-    )
-    # Raise an error if selected vertices span more than one mesh
-    get_components_shape(selected_faces + selected_vertices + selected_uvs)
-    selected_components: tuple[str, ...] = (
-        tuple(_iter_flood_select_vertices(selected_vertices, selected_edges))
-        + tuple(_iter_flood_select_uvs(selected_uvs, selected_edges))
-        + tuple(_iter_flood_select_faces(selected_faces, selected_edges))
-    )
-    cmds.select(
-        *selection,
-        deselect=True,
-    )
-    cmds.select(*selected_components, add=True)
-    # Grow the selection until
-    cmds.waitCursor(state=False)
+    try:
+        selection = selection or tuple(cmds.ls(selection=True, flatten=True))
+        selected_faces: tuple[str, ...] = tuple(
+            iter_selected_components("f", selection=selection)
+        )
+        selected_vertices: tuple[str, ...] = tuple(
+            iter_selected_components("vtx", selection=selection)
+        )
+        selected_uvs: tuple[str, ...] = tuple(
+            iter_selected_components("map", selection=selection)
+        )
+        selected_edges: tuple[str, ...] = tuple(
+            iter_selected_components("e", selection=selection)
+        )
+        # Raise an error if selected vertices span more than one mesh
+        get_components_shape(selected_faces + selected_vertices + selected_uvs)
+        selected_components: tuple[str, ...] = (
+            tuple(
+                _iter_flood_select_vertices(selected_vertices, selected_edges)
+            )
+            + tuple(_iter_flood_select_uvs(selected_uvs, selected_edges))
+            + tuple(_iter_flood_select_faces(selected_faces, selected_edges))
+        )
+        cmds.select(
+            *selection,
+            deselect=True,
+        )
+        cmds.select(*selected_components, add=True)
+    finally:
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return selected_components

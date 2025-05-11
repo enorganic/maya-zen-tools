@@ -221,110 +221,116 @@ def loft_distribute_vertices_between_edges(
         iter_aligned_contiguous_edges(*selected_edges)
     )
     cmds.waitCursor(state=True)
-    index: int
-    edge_loop: tuple[str, ...]
-    curve_transforms: list[str] = []
-    curve_shapes: list[str] = []
-    loft: str = cmds.createNode("loft", name="loft#")
-    for index, edge_loop in enumerate(selected_edge_loops):
-        rebuild_curve: str = create_edges_rebuild_curve(edge_loop)
-        if create_deformer:
-            curve_transform: str = cmds.createNode(
-                "transform", name="loftCurve#", skipSelect=True
-            )
-            curve_shape: str = cmds.createNode(
-                "nurbsCurve",
-                name="loftCurveShape#",
-                parent=curve_transform,
-                skipSelect=True,
-            )
-            cmds.connectAttr(
-                f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
-            )
-            center_pivot(curve_transform)
-            cmds.connectAttr(
-                f"{curve_shape}.worldSpace[0]", f"{loft}.inputCurve[{index}]"
-            )
-            curve_transforms.append(curve_transform)
-            curve_shapes.append(curve_shape)
-        else:
-            cmds.connectAttr(
-                f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
-            )
-        cleanup_items.append(rebuild_curve)
-    rebuild_surface: str = cmds.createNode(
-        "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
-    )
-    cleanup_items.append(rebuild_surface)
-    cmds.connectAttr(
-        f"{loft}.outputSurface",
-        f"{rebuild_surface}.inputSurface",
-    )
-    cmds.setAttr(f"{rebuild_surface}.spansU", len(selected_edge_loops) - 1)
-    cmds.setAttr(f"{rebuild_surface}.spansV", len(selected_edge_loops[0]))
-    cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
-    cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
-    cmds.setAttr(f"{rebuild_surface}.direction", 0)
-    vertices: set[str] = _surface_distribute_vertices_between_edges(
-        f"{rebuild_surface}.outputSurface",
-        edge_loops=selected_edge_loops,
-        distribution_type=distribution_type,
-    )
-    faces: tuple[str, ...] = tuple(
-        cmds.ls(
-            *cmds.polyListComponentConversion(
-                *vertices, fromVertex=True, toFace=True, internal=True
-            ),
-            flatten=True,
+    try:
+        index: int
+        edge_loop: tuple[str, ...]
+        curve_transforms: list[str] = []
+        curve_shapes: list[str] = []
+        loft: str = cmds.createNode("loft", name="loft#")
+        for index, edge_loop in enumerate(selected_edge_loops):
+            rebuild_curve: str = create_edges_rebuild_curve(edge_loop)
+            if create_deformer:
+                curve_transform: str = cmds.createNode(
+                    "transform", name="loftCurve#", skipSelect=True
+                )
+                curve_shape: str = cmds.createNode(
+                    "nurbsCurve",
+                    name="loftCurveShape#",
+                    parent=curve_transform,
+                    skipSelect=True,
+                )
+                cmds.connectAttr(
+                    f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
+                )
+                center_pivot(curve_transform)
+                cmds.connectAttr(
+                    f"{curve_shape}.worldSpace[0]",
+                    f"{loft}.inputCurve[{index}]",
+                )
+                curve_transforms.append(curve_transform)
+                curve_shapes.append(curve_shape)
+            else:
+                cmds.connectAttr(
+                    f"{rebuild_curve}.outputCurve",
+                    f"{loft}.inputCurve[{index}]",
+                )
+            cleanup_items.append(rebuild_curve)
+        rebuild_surface: str = cmds.createNode(
+            "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
         )
-    )
-    if create_deformer:
-        surface_transform: str = cmds.createNode(
-            "transform", name="loftBetweenEdges#"
-        )
-        surface_shape: str = cmds.createNode(
-            "nurbsSurface",
-            name=f"{surface_transform}Shape",
-            parent=surface_transform,
-        )
+        cleanup_items.append(rebuild_surface)
         cmds.connectAttr(
             f"{loft}.outputSurface",
-            f"{surface_shape}.create",
+            f"{rebuild_surface}.inputSurface",
         )
-        cmds.connectAttr(
+        cmds.setAttr(f"{rebuild_surface}.spansU", len(selected_edge_loops) - 1)
+        cmds.setAttr(f"{rebuild_surface}.spansV", len(selected_edge_loops[0]))
+        cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
+        cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
+        cmds.setAttr(f"{rebuild_surface}.direction", 0)
+        vertices: set[str] = _surface_distribute_vertices_between_edges(
             f"{rebuild_surface}.outputSurface",
-            f"{surface_shape}.create",
-            force=True,
+            edge_loops=selected_edge_loops,
+            distribution_type=distribution_type,
         )
-        cmds.setAttr(f"{surface_shape}.intermediateObject", 1)
-        cmds.parent(*curve_transforms, surface_transform)
-        wrap: str = _create_wrap_deformer(
-            f"{rebuild_surface}.outputSurface",
-            f"{surface_shape}.local",
-            vertices,
+        faces: tuple[str, ...] = tuple(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    *vertices, fromVertex=True, toFace=True, internal=True
+                ),
+                flatten=True,
+            )
         )
-
-        def cleanup() -> None:
-            """
-            Disconnect the curves from the mesh, and the rebuilt surface
-            from the base, so that changes aren't negated by having a base
-            transform in concert with the driver
-            """
-            cmds.delete(*curve_shapes, constructionHistory=True)
-            cmds.disconnectAttr(
-                f"{rebuild_surface}.outputSurface", f"{surface_shape}.create"
+        if create_deformer:
+            surface_transform: str = cmds.createNode(
+                "transform", name="loftBetweenEdges#"
+            )
+            surface_shape: str = cmds.createNode(
+                "nurbsSurface",
+                name=f"{surface_transform}Shape",
+                parent=surface_transform,
+            )
+            cmds.connectAttr(
+                f"{loft}.outputSurface",
+                f"{surface_shape}.create",
+            )
+            cmds.connectAttr(
+                f"{rebuild_surface}.outputSurface",
+                f"{surface_shape}.create",
+                force=True,
+            )
+            cmds.setAttr(f"{surface_shape}.intermediateObject", 1)
+            cmds.parent(*curve_transforms, surface_transform)
+            wrap: str = _create_wrap_deformer(
+                f"{rebuild_surface}.outputSurface",
+                f"{surface_shape}.local",
+                vertices,
             )
 
-        cmds.evalDeferred(cleanup)
-        cmds.waitCursor(state=False)
-        # Go into object selection mode, in order to manipulate locators
-        cmds.selectMode(object=True)
-        # Select the middle locator
-        cmds.select(curve_transforms[ceil(len(curve_transforms) / 2) - 1])
-        return (faces, surface_shape, surface_transform, wrap)
-    cmds.delete(*cleanup_items)
-    cmds.waitCursor(state=False)
-    cmds.select(*faces)
+            def cleanup() -> None:
+                """
+                Disconnect the curves from the mesh, and the rebuilt surface
+                from the base, so that changes aren't negated by having a base
+                transform in concert with the driver
+                """
+                cmds.delete(*curve_shapes, constructionHistory=True)
+                cmds.disconnectAttr(
+                    f"{rebuild_surface}.outputSurface",
+                    f"{surface_shape}.create",
+                )
+
+            cmds.evalDeferred(cleanup)
+            # Go into object selection mode, in order to manipulate locators
+            cmds.selectMode(object=True)
+            # Select the middle locator
+            cmds.select(curve_transforms[ceil(len(curve_transforms) / 2) - 1])
+            cmds.waitCursor(state=False)
+            return (faces, surface_shape, surface_transform, wrap)
+        cmds.delete(*cleanup_items)
+        cmds.select(*faces)
+    finally:
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return faces
 
 
@@ -360,49 +366,52 @@ def loft_distribute_uvs_between_edges_or_uvs(
         iter_aligned_contiguous_uvs(*selected_uvs)
     )
     cmds.waitCursor(state=True)
-    index: int
-    uv_loop: tuple[str, ...]
-    loft: str = cmds.createNode("loft", name="loftBetweenUVs#")
-    for index, uv_loop in enumerate(selected_uv_loops):
-        rebuild_curve: str
-        curve_shape: str
-        curve_transform: str
-        rebuild_curve, curve_shape, curve_transform = create_uvs_rebuild_curve(
-            uv_loop
+    try:
+        index: int
+        uv_loop: tuple[str, ...]
+        loft: str = cmds.createNode("loft", name="loftBetweenUVs#")
+        for index, uv_loop in enumerate(selected_uv_loops):
+            rebuild_curve: str
+            curve_shape: str
+            curve_transform: str
+            rebuild_curve, curve_shape, curve_transform = (
+                create_uvs_rebuild_curve(uv_loop)
+            )
+            cleanup.extend((rebuild_curve, curve_shape, curve_transform))
+            cmds.connectAttr(
+                f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
+            )
+        rebuild_surface: str = cmds.createNode(
+            "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
         )
-        cleanup.extend((rebuild_curve, curve_shape, curve_transform))
+        cleanup.append(rebuild_surface)
         cmds.connectAttr(
-            f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
+            f"{loft}.outputSurface",
+            f"{rebuild_surface}.inputSurface",
         )
-    rebuild_surface: str = cmds.createNode(
-        "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
-    )
-    cleanup.append(rebuild_surface)
-    cmds.connectAttr(
-        f"{loft}.outputSurface",
-        f"{rebuild_surface}.inputSurface",
-    )
-    cmds.setAttr(f"{rebuild_surface}.spansU", len(selected_uv_loops) - 1)
-    cmds.setAttr(f"{rebuild_surface}.spansV", len(selected_uv_loops[0]))
-    cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
-    cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
-    cmds.setAttr(f"{rebuild_surface}.direction", 0)
-    uvs: set[str] = _surface_distribute_uvs(
-        f"{rebuild_surface}.outputSurface",
-        uv_loops=selected_uv_loops,
-        distribution_type=distribution_type,
-    )
-    faces: tuple[str, ...] = tuple(
-        cmds.ls(
-            *cmds.polyListComponentConversion(
-                *uvs, fromUV=True, toFace=True, internal=True
-            ),
-            flatten=True,
+        cmds.setAttr(f"{rebuild_surface}.spansU", len(selected_uv_loops) - 1)
+        cmds.setAttr(f"{rebuild_surface}.spansV", len(selected_uv_loops[0]))
+        cmds.setAttr(f"{rebuild_surface}.keepRange", 2)
+        cmds.setAttr(f"{rebuild_surface}.endKnots", 1)
+        cmds.setAttr(f"{rebuild_surface}.direction", 0)
+        uvs: set[str] = _surface_distribute_uvs(
+            f"{rebuild_surface}.outputSurface",
+            uv_loops=selected_uv_loops,
+            distribution_type=distribution_type,
         )
-    )
-    cmds.delete(*cleanup)
-    cmds.waitCursor(state=False)
-    cmds.select(*faces)
+        faces: tuple[str, ...] = tuple(
+            cmds.ls(
+                *cmds.polyListComponentConversion(
+                    *uvs, fromUV=True, toFace=True, internal=True
+                ),
+                flatten=True,
+            )
+        )
+        cmds.delete(*cleanup)
+        cmds.select(*faces)
+    finally:
+        if cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)
     return faces
 
 
