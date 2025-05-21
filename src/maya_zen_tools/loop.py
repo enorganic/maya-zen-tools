@@ -12,6 +12,7 @@ from maya_zen_tools import options
 from maya_zen_tools._create import (
     create_edges_rebuild_curve,
     create_locator,
+    create_node,
     create_uv_edges_rebuild_curve,
 )
 from maya_zen_tools._traverse import (
@@ -86,21 +87,21 @@ def _create_curve_from_vertices(
         create_locators: If `True`, create locators for manipulating the curve.
         close: If `True`, the curve will form a closed loop.
     """
-    curve_transform: str = cmds.createNode(
-        "transform", name="wire#", skipSelect=True
+    curve_transform: str = create_node(
+        "transform", name="wire#", skip_select=True
     )
-    curve_shape: str = cmds.createNode(
+    curve_shape: str = create_node(
         "nurbsCurve",
         name=f"{curve_transform}Shape",
         parent=curve_transform,
-        skipSelect=True,
+        skip_select=True,
     )
     locator_scale: float = _get_vertices_locator_scale(vertices)
     index: int
     translation: tuple[float, float, float]
     locators: list[str] = []
     if len(vertices) == 3 and not close:  # noqa: PLR2004
-        arc: str = cmds.createNode("makeThreePointCircularArc")
+        arc: str = create_node("makeThreePointCircularArc")
         for index, vertex in enumerate(vertices, 1):
             translation = cmds.xform(
                 vertex, query=True, worldSpace=True, translation=True
@@ -121,8 +122,8 @@ def _create_curve_from_vertices(
                 )
         cmds.connectAttr(f"{arc}.outputCurve", f"{curve_shape}.create")
     else:
-        loft: str = cmds.createNode("loft")
-        curve_from_surface_iso: str = cmds.createNode("curveFromSurfaceIso")
+        loft: str = create_node("loft")
+        curve_from_surface_iso: str = create_node("curveFromSurfaceIso")
         cmds.setAttr(f"{curve_from_surface_iso}.isoparmDirection", 0)
         cmds.setAttr(f"{loft}.uniform", 0)
         if close:
@@ -131,7 +132,7 @@ def _create_curve_from_vertices(
             translation = cmds.xform(
                 vertex, query=True, worldSpace=True, translation=True
             )
-            point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+            point_matrix_mult: str = create_node("pointMatrixMult")
             if create_locators:
                 locators.append(
                     create_locator(
@@ -204,19 +205,19 @@ def _create_curve_from_uvs(
         uvs: A list of UVs to create the curve from.
         close: If `True`, the curve will form a closed loop.
     """
-    transform: str = cmds.createNode(
-        "transform", name="zenLoopCurve#", skipSelect=True
+    transform: str = create_node(
+        "transform", name="zenLoopCurve#", skip_select=True
     )
-    shape: str = cmds.createNode(
+    shape: str = create_node(
         "nurbsCurve",
         name="zenLoopCurveShape#",
         parent=transform,
-        skipSelect=True,
+        skip_select=True,
     )
     index: int
     translation: tuple[float, float, float]
     if len(uvs) == 3 and not close:  # noqa: PLR2004
-        arc: str = cmds.createNode("makeThreePointCircularArc")
+        arc: str = create_node("makeThreePointCircularArc")
         for index, uv in enumerate(uvs, 1):
             translation = (*cmds.polyEditUV(uv, query=True), 0)
             cmds.setAttr(
@@ -225,15 +226,15 @@ def _create_curve_from_uvs(
             )
         cmds.connectAttr(f"{arc}.outputCurve", f"{shape}.create")
     else:
-        loft: str = cmds.createNode("loft")
-        curve_from_surface_iso: str = cmds.createNode("curveFromSurfaceIso")
+        loft: str = create_node("loft")
+        curve_from_surface_iso: str = create_node("curveFromSurfaceIso")
         cmds.setAttr(f"{curve_from_surface_iso}.isoparmDirection", 0)
         cmds.setAttr(f"{loft}.uniform", 0)
         if close:
             cmds.setAttr(f"{loft}.close", 1)
         for index, uv in enumerate(uvs, 0):
             translation = (*cmds.polyEditUV(uv, query=True), 0)
-            point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+            point_matrix_mult: str = create_node("pointMatrixMult")
             cmds.setAttr(f"{point_matrix_mult}.inPoint", *translation)
             # Create a 0-length curve to use as an edit point in a loft
             # curve, parent that curve under our output curve transform
@@ -336,7 +337,7 @@ def _distribute_vertices_loop_along_curve(
         else iter_shortest_vertices_path_uniform_positions(selected_vertices)
     )
     # Rebuild the curve
-    rebuild_curve: str = cmds.createNode("rebuildCurve")
+    rebuild_curve: str = create_node("rebuildCurve")
     cmds.connectAttr(
         f"{curve_shape}.worldSpace[0]", f"{rebuild_curve}.inputCurve"
     )
@@ -350,8 +351,8 @@ def _distribute_vertices_loop_along_curve(
     cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
     # This point-on-curve info node will slide along the curve to get
     # transform values for the vertices
-    point_on_curve_info: str = cmds.createNode("pointOnCurveInfo")
-    point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+    point_on_curve_info: str = create_node("pointOnCurveInfo")
+    point_matrix_mult: str = create_node("pointMatrixMult")
     cmds.connectAttr(
         f"{rebuild_curve}.outputCurve", f"{point_on_curve_info}.inputCurve"
     )
@@ -376,7 +377,7 @@ def _distribute_vertices_loop_along_curve(
     cmds.delete(point_on_curve_info)
     cmds.delete(point_matrix_mult)
     if create_deformer:
-        rebuilt_curve: str = cmds.createNode(
+        rebuilt_curve: str = create_node(
             "nurbsCurve",
             parent=curve_transform,
         )
@@ -439,7 +440,7 @@ def _distribute_uvs_loop_along_curve(
         else iter_shortest_uvs_path_uniform_positions(selected_uvs)
     )
     # Rebuild the curve
-    rebuild_curve: str = cmds.createNode("rebuildCurve")
+    rebuild_curve: str = create_node("rebuildCurve")
     cmds.connectAttr(f"{curve_shape}.local", f"{rebuild_curve}.inputCurve")
     cmds.setAttr(f"{rebuild_curve}.rebuildType", 0)
     cmds.setAttr(f"{rebuild_curve}.spans", len(selected_uvs) - 1)
@@ -451,8 +452,8 @@ def _distribute_uvs_loop_along_curve(
     cmds.setAttr(f"{rebuild_curve}.keepRange", 2)
     # This point-on-curve info node will slide along the curve to get
     # transform values for the UVs
-    point_on_curve_info: str = cmds.createNode("pointOnCurveInfo")
-    point_matrix_mult: str = cmds.createNode("pointMatrixMult")
+    point_on_curve_info: str = create_node("pointOnCurveInfo")
+    point_matrix_mult: str = create_node("pointMatrixMult")
     cmds.connectAttr(
         f"{rebuild_curve}.outputCurve", f"{point_on_curve_info}.inputCurve"
     )
@@ -816,10 +817,8 @@ def create_curve_from_edges(*selected_edges: str) -> Iterable[str]:
     selected_edges = selected_edges or tuple(iter_selected_components("e"))
     for edges in iter_contiguous_edges(*selected_edges):
         rebuild_curve: str = create_edges_rebuild_curve(edges)
-        curve_transform: str = cmds.createNode(
-            "transform", name="curveFromEdges#"
-        )
-        curve_shape: str = cmds.createNode(
+        curve_transform: str = create_node("transform", name="curveFromEdges#")
+        curve_shape: str = create_node(
             "nurbsCurve",
             parent=curve_transform,
             name=f"{curve_transform}Shape",

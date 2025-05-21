@@ -57,3 +57,26 @@ class TooManyShapesError(InvalidSelectionError):
 
     def __str__(self) -> str:
         return repr(self)
+
+
+def _get_about() -> str:
+    from maya import cmds  # type: ignore
+
+    return (
+        f"Maya Version: {cmds.about(installedVersion=True)}\n"
+        f"Operating System: {cmds.about(operatingSystem=True)}\n"
+        f"Loaded modules: {cmds.moduleInfo(listModules=True)}\n"
+        f"Loaded plugins: {cmds.pluginInfo(q=True, listPlugins=True)}\n"
+        f"API Version: {cmds.about(apiVersion=True)}\n"
+        f"Build Variant: {cmds.about(buildVariant=True)}\n"
+        f"Creative Version: {cmds.about(creativeVersion=True)}\n"
+        f"Custom Version: {cmds.about(customVersionString=True)}\n"
+        f"Cut Identifier: {cmds.about(cutIdentifier=True)}\n"
+    )
+
+
+class CreateNodeError(ValueError):
+    def __init__(self, node_type: str) -> None:
+        super().__init__(
+            f'"{node_type}" is an unknown node type.\n' f"{_get_about()}"
+        )
