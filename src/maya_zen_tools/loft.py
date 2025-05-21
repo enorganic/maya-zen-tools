@@ -11,6 +11,7 @@ from maya import cmds  # type: ignore
 from maya_zen_tools import options
 from maya_zen_tools._create import (
     create_edges_rebuild_curve,
+    create_node,
     create_uvs_rebuild_curve,
 )
 from maya_zen_tools._transform import center_pivot
@@ -51,7 +52,7 @@ def _surface_distribute_vertices_between_edges(
     vertex_rings: tuple[tuple[str, ...], ...] = tuple(
         zip(*map(tuple, map(iter_edges_vertices, edges_ring)))
     )
-    point_on_surface_info: str = cmds.createNode("pointOnSurfaceInfo")
+    point_on_surface_info: str = create_node("pointOnSurfaceInfo")
     cmds.connectAttr(
         surface_attribute,
         f"{point_on_surface_info}.inputSurface",
@@ -105,7 +106,7 @@ def _surface_distribute_uvs(
             ),
         )
     )
-    point_on_surface_info: str = cmds.createNode("pointOnSurfaceInfo")
+    point_on_surface_info: str = create_node("pointOnSurfaceInfo")
     cmds.connectAttr(
         surface_attribute,
         f"{point_on_surface_info}.inputSurface",
@@ -226,18 +227,18 @@ def loft_distribute_vertices_between_edges(
         edge_loop: tuple[str, ...]
         curve_transforms: list[str] = []
         curve_shapes: list[str] = []
-        loft: str = cmds.createNode("loft", name="loft#")
+        loft: str = create_node("loft", name="loft#")
         for index, edge_loop in enumerate(selected_edge_loops):
             rebuild_curve: str = create_edges_rebuild_curve(edge_loop)
             if create_deformer:
-                curve_transform: str = cmds.createNode(
-                    "transform", name="loftCurve#", skipSelect=True
+                curve_transform: str = create_node(
+                    "transform", name="loftCurve#", skip_select=True
                 )
-                curve_shape: str = cmds.createNode(
+                curve_shape: str = create_node(
                     "nurbsCurve",
                     name="loftCurveShape#",
                     parent=curve_transform,
-                    skipSelect=True,
+                    skip_select=True,
                 )
                 cmds.connectAttr(
                     f"{rebuild_curve}.outputCurve", f"{curve_shape}.create"
@@ -255,7 +256,7 @@ def loft_distribute_vertices_between_edges(
                     f"{loft}.inputCurve[{index}]",
                 )
             cleanup_items.append(rebuild_curve)
-        rebuild_surface: str = cmds.createNode(
+        rebuild_surface: str = create_node(
             "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
         )
         cleanup_items.append(rebuild_surface)
@@ -282,10 +283,10 @@ def loft_distribute_vertices_between_edges(
             )
         )
         if create_deformer:
-            surface_transform: str = cmds.createNode(
+            surface_transform: str = create_node(
                 "transform", name="loftBetweenEdges#"
             )
-            surface_shape: str = cmds.createNode(
+            surface_shape: str = create_node(
                 "nurbsSurface",
                 name=f"{surface_transform}Shape",
                 parent=surface_transform,
@@ -369,7 +370,7 @@ def loft_distribute_uvs_between_edges_or_uvs(
     try:
         index: int
         uv_loop: tuple[str, ...]
-        loft: str = cmds.createNode("loft", name="loftBetweenUVs#")
+        loft: str = create_node("loft", name="loftBetweenUVs#")
         for index, uv_loop in enumerate(selected_uv_loops):
             rebuild_curve: str
             curve_shape: str
@@ -381,7 +382,7 @@ def loft_distribute_uvs_between_edges_or_uvs(
             cmds.connectAttr(
                 f"{rebuild_curve}.outputCurve", f"{loft}.inputCurve[{index}]"
             )
-        rebuild_surface: str = cmds.createNode(
+        rebuild_surface: str = create_node(
             "rebuildSurface", name="loftBetweenEdgesRebuildSurface#"
         )
         cleanup.append(rebuild_surface)
