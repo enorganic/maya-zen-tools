@@ -184,6 +184,11 @@ def create_node(
         shared:
         skip_select:
     """
+    if node_type == "pointMatrixMult" and (
+        int(cmds.about(version=True)) > 2025  # noqa: PLR2004
+    ):
+        # In Maya 2026, `pointMatrixMult` was renamed to `pointMatrixMultDL`
+        node_type = "pointMatrixMultDL"
     node_name: str = cmds.createNode(
         node_type,
         **({"name": name} if name is not None else {}),
