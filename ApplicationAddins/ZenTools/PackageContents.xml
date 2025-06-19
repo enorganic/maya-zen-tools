@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+	ProductType="Application"
+    AutodeskProduct="Maya"
+	Name="ZenTools"
+	Description="ZenTools for Maya"
+	Author="David Belais"
+	OnlineDocumentation="https://maya-zen-tools.enorganic.org"
+>
+	<Components>
+		<RuntimeRequirements OS="win64|macOS|linux" Platform="Maya" SeriesMin="2023" />
+		<MayaEnv expr="MAYA_SCRIPT_PATH+:=scripts" />
+		<ComponentEntry ModuleName="./Contents/scripts/ZenTools_load.py" AutoLoad="True" />
+	</Components>
+</ApplicationPackage>
