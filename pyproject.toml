@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maya-zen-tools"
-version = "0.1.75"
+version = "0.1.76"
 description = "Zen Tools for Maya"
 readme = "README.md"
 license = "MIT"
@@ -21,7 +21,7 @@ keywords = [
 ]
 dependencies = [
     "platformdirs~=4.3",
-    "more-itertools~=10.5",
+    "more-itertools~=10.7",
 ]
 
 [project.urls]
@@ -31,20 +31,24 @@ Repository = "https://github.com/enorganic/maya-zen-tools"
 packages = [
     "src/maya_zen_tools",
 ]
-sources = ["src"]
+sources = [
+    "src",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/maya_zen_tools",
 ]
-sources = ["src"]
+sources = [
+    "src",
+]
 
 [tool.hatch.envs.default]
 dependencies = [
     "pytest",
     "mypy",
     "dependence~=1.0",
-    "gittable~=0.0"
+    "gittable~=0.0",
 ]
 program_name = "mayapy"
 pre-install-commands = [
@@ -55,9 +59,13 @@ post-install-commands = [
 ]
 
 [tool.hatch.envs.hatch-static-analysis]
-extra-args = ["-s", "-vv"]
-extra-dependencies = ["dependence~=1.0"]
-
+extra-args = [
+    "-s",
+    "-vv",
+]
+extra-dependencies = [
+    "dependence~=1.0",
+]
 
 [tool.hatch.envs.docs]
 dependencies = [
@@ -69,17 +77,13 @@ dependencies = [
 pre-install-commands = []
 post-install-commands = []
 
-[tool.hatch.envs.hatch-test]
-extra-dependencies = [
-    "dependence~=1.0",
-]
-
 [tool.ruff]
 line-length = 79
 
 [tool.ruff.lint]
 ignore = [
-    "F842", "INP001"
+    "F842",
+    "INP001",
 ]
 extend-select = [
     "E",
@@ -122,5 +126,6 @@ disallow_incomplete_defs = true
 fail_under = 80
 
 [tool.coverage.paths]
-source = ["src"]
-
+source = [
+    "src",
+]

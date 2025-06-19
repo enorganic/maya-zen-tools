@@ -46,15 +46,19 @@ def show_about() -> None:
     cmds.window(
         ABOUT_WINDOW,
         title="About ZenTools",
+        height=105,
+        width=237,
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
         parent=ABOUT_WINDOW,
-        margins=15,
+        columnOffset=("both", 10),
     )
     version: str = get_maya_zen_tools_package_info()["version"]
     cmds.text(
         label=(
-            f"ZenTools {version} © "
+            f"\nZenTools {version} © "
             f"{datetime.now(tz=timezone.utc).year} by David Belais\n"
         ),
         align="left",
@@ -63,7 +67,6 @@ def show_about() -> None:
     debugging: bool = get_tool_option(  # type: ignore
         "general", "debugging", False
     )
-    row_layout: str
     # If debugging is enabled, or if ZenTools is installed as an editable
     # package, show an option to enable/disable debugging
     with contextlib.suppress(Exception):

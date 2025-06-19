@@ -430,14 +430,19 @@ def show_loft_distribute_vertices_between_edges_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
+        width=450,
         height=100,
         title=(
             f"ZenTools: {LOFT_DISTRIBUTE_VERTICES_BETWEEN_EDGES_LABEL} Options"
         ),
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     selected: int = 1
     with contextlib.suppress(ValueError):
@@ -525,15 +530,20 @@ def show_loft_distribute_uvs_between_edges_or_uvs_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
-        height=100,
+        width=470,
+        height=65,
         title=(
             "ZenTools: "
             f"{LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL} Options"
         ),
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     selected: int = 1
     with contextlib.suppress(ValueError):

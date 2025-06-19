@@ -20,8 +20,15 @@ def show_confirmation_dialogue(
         cancel_command: The command to execute if the user clicks "Cancel".
         title: The title for the dialogue window.
     """
-    window: str = cmds.window(title=title or label)
-    column_layout: str = cmds.columnLayout(parent=window, margins=15)
+    window: str = cmds.window(
+        title=title or label,
+        resizeToFitChildren=True,
+        sizeable=False,
+    )
+    column_layout: str = cmds.columnLayout(
+        parent=window,
+        columnOffset=("both", 10),
+    )
     cmds.text(
         label=f"{label.rstrip()}\n",
         align="left",
