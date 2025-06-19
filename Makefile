@@ -36,7 +36,9 @@ reinstall:
 
 # Zip the Autodesk App Store add-in package
 addin:
-	zip -x **/.* -X -r ApplicationAddins/ZenTools.zip ApplicationAddins/ZenTools/
+	cd ApplicationAddins && \
+	rm ZenTools.zip && \
+	zip -x **/.* -X -r ZenTools.zip ZenTools
 
 
 distribute:
