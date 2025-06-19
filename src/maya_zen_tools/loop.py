@@ -852,12 +852,17 @@ def show_curve_distribute_vertices_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
-        height=100,
+        width=425,
+        height=165,
         title=f"ZenTools: {CURVE_DISTRIBUTE_BETWEEN_VERTICES_LABEL} Options",
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     selected: int = 1
     with contextlib.suppress(ValueError):
@@ -993,12 +998,17 @@ def show_curve_distribute_uvs_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
-        height=100,
+        width=390,
+        height=130,
         title=f"ZenTools: {CURVE_DISTRIBUTE_BETWEEN_UVS_LABEL} Options",
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     selected: int = 1
     with contextlib.suppress(ValueError):
@@ -1115,12 +1125,17 @@ def show_select_edges_between_vertices_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
+        width=400,
         height=100,
         title=f"ZenTools: {SELECT_EDGES_BETWEEN_VERTICES_LABEL} Options",
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     use_selection_order: bool = get_option(  # type: ignore
         "use_selection_order", False
@@ -1207,12 +1222,17 @@ def show_select_edges_between_uvs_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
+        width=400,
         height=100,
         title=f"ZenTools: {SELECT_EDGES_BETWEEN_UVS_LABEL} Options",
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     use_selection_order: bool = get_option(  # type: ignore
         "use_selection_order", False
@@ -1302,9 +1322,14 @@ def show_select_between_uvs_options() -> None:
         width=240,
         height=100,
         title=f"ZenTools: {SELECT_UVS_BETWEEN_UVS_LABEL} Options",
+        resizeToFitChildren=True,
+        sizeable=False,
     )
     column_layout: str = cmds.columnLayout(
-        adjustableColumn=True, parent=WINDOW, columnAlign="left", margins=15
+        adjustableColumn=True,
+        parent=WINDOW,
+        columnAlign="left",
+        columnOffset=("both", 10),
     )
     use_selection_order: bool = get_option(  # type: ignore
         "use_selection_order", False

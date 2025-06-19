@@ -5,12 +5,24 @@ MINIMUM_PYTHON_VERSION := 3.8
 # Create all hatch environments + install maya-zen-tools in mayapy
 install:
 	{ hatch --version || pipx install --upgrade hatch || python3 -m pip install --upgrade hatch ; } && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2023):$$PATH" && \
+	mayapy -m pip install pip --upgrade && \
+	mayapy -m pip install mypy coverage pytest dependence -e . --upgrade --upgrade-strategy eager && \
+	mayapy -m maya_zen_tools.install && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2024):$$PATH" && \
+	mayapy -m pip install pip --upgrade && \
+	mayapy -m pip install mypy coverage pytest dependence -e . --upgrade --upgrade-strategy eager && \
+	mayapy -m maya_zen_tools.install && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2025):$$PATH" && \
+	mayapy -m pip install pip --upgrade && \
+	mayapy -m pip install mypy coverage pytest dependence -e . --upgrade --upgrade-strategy eager && \
+	mayapy -m maya_zen_tools.install && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2026):$$PATH" && \
 	mayapy -m pip install pip --upgrade && \
 	mayapy -m pip install mypy coverage pytest dependence -e . --upgrade --upgrade-strategy eager && \
 	mayapy -m maya_zen_tools.install && \
 	hatch env create default && \
 	hatch env create docs && \
-	hatch env create hatch-test && \
 	hatch env create hatch-static-analysis && \
 	echo "Installation complete"
 
@@ -27,6 +39,25 @@ distribute:
 
 # Upgrade all requirements in all hatch environments, and in mayapy
 upgrade:
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2023):$$PATH" && \
+	mayapy -m dependence freeze\
+	 -nv '*'\
+	 . dependence > .requirements.txt && \
+	mayapy -m pip install --upgrade --upgrade-strategy eager\
+	 -r .requirements.txt && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2024):$$PATH" && \
+	mayapy -m dependence freeze\
+	 -nv '*'\
+	 . dependence > .requirements.txt && \
+	mayapy -m pip install --upgrade --upgrade-strategy eager\
+	 -r .requirements.txt && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2025):$$PATH" && \
+	mayapy -m dependence freeze\
+	 -nv '*'\
+	 . dependence > .requirements.txt && \
+	mayapy -m pip install --upgrade --upgrade-strategy eager\
+	 -r .requirements.txt && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2026):$$PATH" && \
 	mayapy -m dependence freeze\
 	 -nv '*'\
 	 . dependence > .requirements.txt && \
@@ -53,13 +84,6 @@ upgrade:
 	 pyproject.toml > .requirements.txt && \
 	hatch run hatch-static-analysis:pip install --upgrade --upgrade-strategy eager\
 	 -r .requirements.txt && \
-	hatch run hatch-test.py$(MINIMUM_PYTHON_VERSION):dependence freeze\
-	 -nv '*'\
-	 --include-pointer /tool/hatch/envs/hatch-test\
-	 --include-pointer /project\
-	 pyproject.toml > .requirements.txt && \
-	hatch run hatch-test.py$(MINIMUM_PYTHON_VERSION):pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
 	 rm .requirements.txt && \
 	make requirements
 
@@ -67,6 +91,19 @@ upgrade:
 # package versions installed in each environment, and will align the project
 # dependency versions with those installed in the default environment
 requirements:
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2023):$$PATH" && \
+	mayapy -m dependence update\
+	 --include-pointer /project\
+	 pyproject.toml && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2024):$$PATH" && \
+	mayapy -m dependence update\
+	 --include-pointer /project\
+	 pyproject.toml && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2025):$$PATH" && \
+	mayapy -m dependence update\
+	 --include-pointer /project\
+	 pyproject.toml && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2026):$$PATH" && \
 	mayapy -m dependence update\
 	 --include-pointer /project\
 	 pyproject.toml && \
@@ -74,8 +111,7 @@ requirements:
 	 --include-pointer /tool/hatch/envs/default\
 	 pyproject.toml && \
 	hatch run hatch-static-analysis:dependence update pyproject.toml --include-pointer /tool/hatch/envs/hatch-static-analysis && \
-	hatch run docs:dependence update pyproject.toml --include-pointer /tool/hatch/envs/docs && \
-	hatch run hatch-test.py$(MINIMUM_PYTHON_VERSION):dependence update pyproject.toml --include-pointer /tool/hatch/envs/hatch-test
+	hatch run docs:dependence update pyproject.toml --include-pointer /tool/hatch/envs/docs
 
 # Test & check linting/formatting (for local use only)
 test:
