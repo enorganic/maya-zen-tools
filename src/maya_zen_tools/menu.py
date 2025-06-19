@@ -43,6 +43,8 @@ def show_about() -> None:
     """
     if cmds.window(ABOUT_WINDOW, exists=True):
         cmds.deleteUI(ABOUT_WINDOW)
+    if cmds.windowPref(ABOUT_WINDOW, exists=True):
+        cmds.windowPref(ABOUT_WINDOW, remove=True)
     cmds.window(
         ABOUT_WINDOW,
         title="About ZenTools",
@@ -111,6 +113,7 @@ def show_about() -> None:
     )
     cmds.button(
         label="Uninstall ZenTools",
+        parent=row_layout,
         command=(
             "from maya import cmds\n"
             "from maya_zen_tools import _ui\n"
@@ -120,6 +123,10 @@ def show_about() -> None:
             'uninstall.main()", title="Uninstall ZenTools?")\n'
             f"cmds.deleteUI('{ABOUT_WINDOW}')"
         ),
+    )
+    cmds.text(
+        label="",
+        parent=column_layout,
     )
     cmds.showWindow(ABOUT_WINDOW)
 

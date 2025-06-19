@@ -428,6 +428,8 @@ def show_loft_distribute_vertices_between_edges_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=450,
@@ -502,6 +504,10 @@ def show_loft_distribute_vertices_between_edges_options() -> None:
             f"cmds.deleteUI('{WINDOW}')"
         ),
     )
+    cmds.text(
+        label="",
+        parent=column_layout,
+    )
     cmds.showWindow(WINDOW)
 
 
@@ -528,6 +534,8 @@ def show_loft_distribute_uvs_between_edges_or_uvs_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=470,

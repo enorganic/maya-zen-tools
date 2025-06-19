@@ -34,6 +34,11 @@ reinstall:
 	make && \
 	make requirements
 
+# Zip the Autodesk App Store add-in package
+addin:
+	zip -x **/.* -X -r ApplicationAddins/ZenTools.zip ApplicationAddins/ZenTools/
+
+
 distribute:
 	hatch build && hatch publish && rm -rf dist
 

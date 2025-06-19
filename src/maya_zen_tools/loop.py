@@ -850,6 +850,8 @@ def show_curve_distribute_vertices_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=425,
@@ -970,6 +972,10 @@ def show_curve_distribute_vertices_options() -> None:
             f"cmds.deleteUI('{WINDOW}')"
         ),
     )
+    cmds.text(
+        label="",
+        parent=column_layout,
+    )
     cmds.showWindow(WINDOW)
 
 
@@ -996,6 +1002,8 @@ def show_curve_distribute_uvs_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=390,
@@ -1097,6 +1105,10 @@ def show_curve_distribute_uvs_options() -> None:
             f"cmds.deleteUI('{WINDOW}')"
         ),
     )
+    cmds.text(
+        label="",
+        parent=column_layout,
+    )
     cmds.showWindow(WINDOW)
 
 
@@ -1123,6 +1135,8 @@ def show_select_edges_between_vertices_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=400,
@@ -1194,6 +1208,10 @@ def show_select_edges_between_vertices_options() -> None:
             f"cmds.deleteUI('{WINDOW}')"
         ),
     )
+    cmds.text(
+        label="",
+        parent=column_layout,
+    )
     cmds.showWindow(WINDOW)
 
 
@@ -1220,6 +1238,8 @@ def show_select_edges_between_uvs_options() -> None:
     # Create the window
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
+    if cmds.windowPref(WINDOW, exists=True):
+        cmds.windowPref(WINDOW, remove=True)
     cmds.window(
         WINDOW,
         width=400,
@@ -1319,7 +1339,7 @@ def show_select_between_uvs_options() -> None:
         cmds.deleteUI(WINDOW)
     cmds.window(
         WINDOW,
-        width=240,
+        width=380,
         height=100,
         title=f"ZenTools: {SELECT_UVS_BETWEEN_UVS_LABEL} Options",
         resizeToFitChildren=True,
@@ -1387,6 +1407,10 @@ def show_select_between_uvs_options() -> None:
             "loop.do_select_between_uvs()\n"
             f"cmds.deleteUI('{WINDOW}')"
         ),
+    )
+    cmds.text(
+        label="",
+        parent=column_layout,
     )
     cmds.showWindow(WINDOW)
 

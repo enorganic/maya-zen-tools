@@ -24,13 +24,14 @@ def show_confirmation_dialogue(
         title=title or label,
         resizeToFitChildren=True,
         sizeable=False,
+        width=340,
     )
     column_layout: str = cmds.columnLayout(
         parent=window,
         columnOffset=("both", 10),
     )
     cmds.text(
-        label=f"{label.rstrip()}\n",
+        label=f"\n{label.strip()}\n",
         align="left",
         parent=column_layout,
     )
@@ -52,5 +53,9 @@ def show_confirmation_dialogue(
             "from maya import cmds\n"
             f"cmds.deleteUI('{window}')"
         ),
+    )
+    cmds.text(
+        label="",
+        parent=column_layout,
     )
     cmds.showWindow(window)
