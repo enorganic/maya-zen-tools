@@ -13,5 +13,9 @@ end_of_line = lf
 [Makefile]
 indent_style = tab
 
+[*.{sh,yml,yaml}]
+indent_style = space
+indent_size = 2
+
 [*.{diff,patch}]
 trim_trailing_whitespace = false

@@ -24,6 +24,7 @@ install:
 	hatch env create default && \
 	hatch env create docs && \
 	hatch env create hatch-static-analysis && \
+	hatch run python scripts/install_addin.py && \
 	echo "Installation complete"
 
 # Re-create all environments, from scratch (no reference to pinned
@@ -38,8 +39,8 @@ reinstall:
 addin:
 	cd ApplicationAddins && \
 	rm ZenTools.zip && \
-	zip -x **/.* -X -r ZenTools.zip ZenTools
-
+	zip -x **/.* -X -r ZenTools.zip ZenTools && \
+	hatch run python scripts/install_addin.py
 
 distribute:
 	hatch build && hatch publish && rm -rf dist
@@ -123,7 +124,16 @@ requirements:
 # Test & check linting/formatting (for local use only)
 test:
 	{ hatch --version || pipx install --upgrade hatch || python3 -m pip install --upgrade hatch ; } && \
-	mayapy -m pytest -s -vv -p no:faulthandler && hatch fmt --check && hatch run mypy
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2023):$$PATH" && \
+	mayapy -m pytest -s -vv -p no:faulthandler && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2024):$$PATH" && \
+	mayapy -m pytest -s -vv -p no:faulthandler && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2025):$$PATH" && \
+	mayapy -m pytest -s -vv -p no:faulthandler && \
+	PATH="$$(hatch run python scripts/which_mayapy.py -d 2026):$$PATH" && \
+	mayapy -m pytest -s -vv -p no:faulthandler && \
+	hatch fmt --check && \
+	hatch run mypy
 
 format:
 	hatch fmt --formatter && \
