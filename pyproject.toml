@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maya-zen-tools"
-version = "0.1.77"
+version = "0.1.78"
 description = "Zen Tools for Maya"
 readme = "README.md"
 license = "MIT"
