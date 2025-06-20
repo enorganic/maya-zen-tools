@@ -82,6 +82,21 @@ def find_user_setup_py() -> Path:
     return scripts_directory / "userSetup.py"
 
 
+def find_zen_tools_package_directory() -> Path | None:
+    """
+    Return the path to the Autodesk Marketplace package, if that is how
+    maya-zen-tools has been installed.
+    """
+    path: Path
+    for path in map(
+        Path, os.environ.get("MAYA_SCRIPT_PATH", "").split(os.path.pathsep)
+    ):
+        grand_parent: Path = path.parent.parent
+        if grand_parent.name == "ZenTools":
+            return grand_parent
+    return None
+
+
 def get_maya_zen_tools_package_info() -> dict[str, str]:
     package_info: dict[str, str]
     for package_info in json.loads(

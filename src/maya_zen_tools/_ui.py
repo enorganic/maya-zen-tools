@@ -3,6 +3,7 @@ from __future__ import annotations
 from maya import cmds  # type: ignore
 
 WINDOW: str = "zenToolsWindow"
+CONFIRMATION_WINDOW: str = "zenToolsConfirmationWindow"
 
 
 def show_confirmation_dialogue(
@@ -20,14 +21,20 @@ def show_confirmation_dialogue(
         cancel_command: The command to execute if the user clicks "Cancel".
         title: The title for the dialogue window.
     """
-    window: str = cmds.window(
+    # Create the window
+    if cmds.window(CONFIRMATION_WINDOW, exists=True):
+        cmds.deleteUI(CONFIRMATION_WINDOW)
+    if cmds.windowPref(CONFIRMATION_WINDOW, exists=True):
+        cmds.windowPref(CONFIRMATION_WINDOW, remove=True)
+    cmds.window(
+        CONFIRMATION_WINDOW,
         title=title or label,
         resizeToFitChildren=True,
         sizeable=False,
         width=340,
     )
     column_layout: str = cmds.columnLayout(
-        parent=window,
+        parent=CONFIRMATION_WINDOW,
         columnOffset=("both", 10),
     )
     cmds.text(
@@ -42,7 +49,7 @@ def show_confirmation_dialogue(
         command=(
             f"{yes_command}\n"
             "from maya import cmds\n"
-            f"cmds.deleteUI('{window}')"
+            f"cmds.deleteUI('{CONFIRMATION_WINDOW}')"
         ),
     )
     cmds.button(
@@ -51,11 +58,11 @@ def show_confirmation_dialogue(
         command=(
             f"{cancel_command}\n"
             "from maya import cmds\n"
-            f"cmds.deleteUI('{window}')"
+            f"cmds.deleteUI('{CONFIRMATION_WINDOW}')"
         ),
     )
     cmds.text(
         label="",
         parent=column_layout,
     )
-    cmds.showWindow(window)
+    cmds.showWindow(CONFIRMATION_WINDOW)

@@ -9,7 +9,10 @@ import argparse
 import re
 from typing import TYPE_CHECKING
 
-from maya_zen_tools._utilities import find_user_setup_py
+from maya_zen_tools._utilities import (
+    find_user_setup_py,
+    find_zen_tools_package_directory,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,9 +20,13 @@ if TYPE_CHECKING:
 
 def install() -> None:
     """
-    Add the line "from maya_zen_tools import startup" to userSetup.py,
-    if it isn't already in the script.
+    Check to see if the ZenTools Autodesk marketplace add-in
+    is installed, and if not—add the line "from maya_zen_tools import startup"
+    to userSetup.py (if it isn't already in the script).
     """
+    if find_zen_tools_package_directory():
+        # If there's a package—we don't need to look for a userSetup.py script.
+        return
     user_setup_py: str = ""
     user_setup_py_path: Path = find_user_setup_py()
     if user_setup_py_path.is_file():
