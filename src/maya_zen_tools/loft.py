@@ -28,7 +28,7 @@ from maya_zen_tools._traverse import (
     iter_vertices_path_proportional_positions,
     iter_vertices_path_uniform_positions,
 )
-from maya_zen_tools._ui import WINDOW
+from maya_zen_tools._ui import WINDOW, set_wait_cursor_state
 from maya_zen_tools.errors import EdgesNotOnSameRingError
 from maya_zen_tools.menu import (
     LOFT_DISTRIBUTE_UVS_BETWEEN_EDGES_OR_UVS_LABEL,
@@ -221,7 +221,7 @@ def loft_distribute_vertices_between_edges(
     selected_edge_loops: tuple[tuple[str, ...], ...] = tuple(
         iter_aligned_contiguous_edges(*selected_edges)
     )
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         index: int
         edge_loop: tuple[str, ...]
@@ -325,13 +325,12 @@ def loft_distribute_vertices_between_edges(
             cmds.selectMode(object=True)
             # Select the middle locator
             cmds.select(curve_transforms[ceil(len(curve_transforms) / 2) - 1])
-            cmds.waitCursor(state=False)
+            set_wait_cursor_state(False)
             return (faces, surface_shape, surface_transform, wrap)
         cmds.delete(*cleanup_items)
         cmds.select(*faces)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return faces
 
 
@@ -366,7 +365,7 @@ def loft_distribute_uvs_between_edges_or_uvs(
     selected_uv_loops: tuple[tuple[str, ...], ...] = tuple(
         iter_aligned_contiguous_uvs(*selected_uvs)
     )
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         index: int
         uv_loop: tuple[str, ...]
@@ -411,8 +410,7 @@ def loft_distribute_uvs_between_edges_or_uvs(
         cmds.delete(*cleanup)
         cmds.select(*faces)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return faces
 
 

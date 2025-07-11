@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maya-zen-tools"
-version = "0.1.78"
+version = "0.1.79"
 description = "Zen Tools for Maya"
 readme = "README.md"
 license = "MIT"
@@ -47,7 +47,7 @@ sources = [
 dependencies = [
     "pytest",
     "mypy",
-    "dependence~=1.0",
+    "dependence~=1.1",
     "gittable~=0.0",
 ]
 program_name = "mayapy"
@@ -64,7 +64,7 @@ extra-args = [
     "-vv",
 ]
 extra-dependencies = [
-    "dependence~=1.0",
+    "dependence~=1.1",
 ]
 
 [tool.hatch.envs.docs]
@@ -72,7 +72,7 @@ dependencies = [
     "mkdocs-material",
     "mkdocstrings[python]",
     "black",
-    "dependence~=1.0",
+    "dependence~=1.1",
 ]
 pre-install-commands = []
 post-install-commands = []

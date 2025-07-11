@@ -10,6 +10,7 @@ from maya_zen_tools._traverse import (
     get_shared_edge_vertices,
     iter_selected_components,
 )
+from maya_zen_tools._ui import set_wait_cursor_state
 
 
 def _iter_flood_select_vertices(
@@ -115,7 +116,7 @@ def flood_select(*selection: str) -> tuple[str, ...]:
     ...this function will expand the face, vertex, or UV selection to
     encompass the area enclosed by the selected edges.
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         selection = selection or tuple(cmds.ls(selection=True, flatten=True))
         selected_faces: tuple[str, ...] = tuple(
@@ -145,6 +146,5 @@ def flood_select(*selection: str) -> tuple[str, ...]:
         )
         cmds.select(*selected_components, add=True)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return selected_components

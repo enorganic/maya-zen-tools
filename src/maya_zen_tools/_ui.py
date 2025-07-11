@@ -66,3 +66,17 @@ def show_confirmation_dialogue(
         parent=column_layout,
     )
     cmds.showWindow(CONFIRMATION_WINDOW)
+
+
+def set_wait_cursor_state(state: bool) -> None:  # noqa: FBT001
+    """
+    Set the wait cursor state.
+
+    Parameters:
+        state: True to set the wait to "on", False to turn it off.
+    """
+    if state and not cmds.waitCursor(query=True, state=True):
+        cmds.waitCursor(state=True)
+    else:
+        while cmds.waitCursor(query=True, state=True):
+            cmds.waitCursor(state=False)

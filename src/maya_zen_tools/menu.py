@@ -57,12 +57,14 @@ def show_about() -> None:
         parent=ABOUT_WINDOW,
         columnOffset=("both", 10),
     )
-    version: str = get_maya_zen_tools_package_info()["version"]
+    version: str = ""
+    with contextlib.suppress(Exception):
+        get_maya_zen_tools_package_info()["version"]
     cmds.text(
         label=(
             f"\nZenTools {version} © "
             f"{datetime.now(tz=timezone.utc).year} by David Belais\n"
-        ),
+        ).replace("  ", " "),
         align="left",
         parent=column_layout,
     )
