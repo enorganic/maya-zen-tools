@@ -4,8 +4,8 @@ import contextlib
 import functools
 import importlib
 import json
+import subprocess
 import sys
-from subprocess import check_output
 from traceback import format_exception
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
@@ -95,6 +95,38 @@ def find_zen_tools_package_directory() -> Path | None:
         if grand_parent.name == "ZenTools":
             return grand_parent
     return None
+
+
+@functools.wraps(subprocess.check_output)
+def check_output(*args: Any, **kwargs: Any) -> str:
+    """
+    A wrapper around `subprocess.check_output` which will not open a console
+    window on Windows.
+    """
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = (
+            kwargs.get("creationflags", 0) | subprocess.CREATE_NO_WINDOW
+        )
+    return subprocess.check_output(
+        *args,
+        **kwargs,
+    )
+
+
+@functools.wraps(subprocess.check_call)
+def check_call(*args: Any, **kwargs: Any) -> int:
+    """
+    A wrapper around `subprocess.check_call` which will not open a console
+    window on Windows.
+    """
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = (
+            kwargs.get("creationflags", 0) | subprocess.CREATE_NO_WINDOW
+        )
+    return subprocess.check_call(
+        *args,
+        **kwargs,
+    )
 
 
 def get_maya_zen_tools_package_info() -> dict[str, str]:

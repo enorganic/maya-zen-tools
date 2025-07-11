@@ -8,12 +8,12 @@ from __future__ import annotations
 import argparse
 import re
 from shutil import rmtree
-from subprocess import check_call
 from typing import TYPE_CHECKING
 
 from maya import cmds  # type: ignore
 
 from maya_zen_tools._utilities import (
+    check_call,
     find_user_setup_py,
     find_zen_tools_package_directory,
     which_mayapy,

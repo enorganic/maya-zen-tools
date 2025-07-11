@@ -48,52 +48,27 @@ distribute:
 # Upgrade all requirements in all hatch environments, and in mayapy
 upgrade:
 	PATH="$$(hatch run python scripts/which_mayapy.py -d 2023):$$PATH" && \
-	mayapy -m dependence freeze\
-	 -nv '*'\
-	 . dependence > .requirements.txt && \
-	mayapy -m pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
+	mayapy -m dependence upgrade\
+	 . dependence && \
 	PATH="$$(hatch run python scripts/which_mayapy.py -d 2024):$$PATH" && \
-	mayapy -m dependence freeze\
-	 -nv '*'\
-	 . dependence > .requirements.txt && \
-	mayapy -m pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
+	mayapy -m dependence upgrade\
+	 . dependence && \
 	PATH="$$(hatch run python scripts/which_mayapy.py -d 2025):$$PATH" && \
-	mayapy -m dependence freeze\
-	 -nv '*'\
-	 . dependence > .requirements.txt && \
-	mayapy -m pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
+	mayapy -m dependence upgrade\
+	 . dependence && \
 	PATH="$$(hatch run python scripts/which_mayapy.py -d 2026):$$PATH" && \
-	mayapy -m dependence freeze\
-	 -nv '*'\
-	 . dependence > .requirements.txt && \
-	mayapy -m pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
-	hatch run dependence freeze\
-	 -nv '*'\
+	mayapy -m dependence upgrade\
+	 . dependence && \
+	hatch run dependence upgrade\
 	 --include-pointer /tool/hatch/envs/default\
 	 --include-pointer /project\
-	 pyproject.toml >> .requirements.txt && \
-	hatch run pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
-	hatch run docs:dependence freeze\
-	 -nv '*'\
+	 pyproject.toml && \
+	hatch run docs:dependence upgrade\
 	 --include-pointer /tool/hatch/envs/docs\
-	 --include-pointer /project\
-	 pyproject.toml > .requirements.txt && \
-	hatch run docs:pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
-	hatch run hatch-static-analysis:dependence freeze\
-	 -nv '*'\
-	 --include-pointer /tool/hatch/envs/docs\
-	 --include-pointer /project\
-	 pyproject.toml > .requirements.txt && \
-	hatch run hatch-static-analysis:pip install --upgrade --upgrade-strategy eager\
-	 -r .requirements.txt && \
-	 rm .requirements.txt && \
-	make requirements
+	 pyproject.toml && \
+	hatch run hatch-static-analysis:dependence upgrade\
+	 --include-pointer /tool/hatch/envs/hatch-static-analysis\
+	 pyproject.toml
 
 # This will update pinned requirements to align with the
 # package versions installed in each environment, and will align the project

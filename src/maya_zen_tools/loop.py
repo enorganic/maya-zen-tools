@@ -31,7 +31,7 @@ from maya_zen_tools._traverse import (
     iter_uvs_edges,
     iter_vertices_edges,
 )
-from maya_zen_tools._ui import WINDOW
+from maya_zen_tools._ui import WINDOW, set_wait_cursor_state
 from maya_zen_tools._utilities import as_tuple
 from maya_zen_tools.menu import (
     CLOSE_CHECKBOX,
@@ -501,7 +501,7 @@ def select_edges_between_vertices(
     Returns:
         A tuple of the selected edges.
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         if use_selection_order:
             # Check to make sure that selection order is being tracked, and
@@ -534,8 +534,7 @@ def select_edges_between_vertices(
         # Deselect vertices
         cmds.select(selected_vertices, deselect=True)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return edges
 
 
@@ -557,7 +556,7 @@ def select_edges_between_uvs(
     Returns:
         A tuple of the selected edges.
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         if use_selection_order:
             # Check to make sure that selection order is being tracked, and
@@ -586,7 +585,7 @@ def select_edges_between_uvs(
         # Deselect UVs
         cmds.select(selected_uvs, deselect=True)
     finally:
-        cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return edges
 
 
@@ -608,7 +607,7 @@ def select_between_uvs(
     Returns:
         A tuple of the selected UVs.
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         if use_selection_order:
             # Check to make sure that selection order is being tracked, and
@@ -633,8 +632,7 @@ def select_between_uvs(
         # Select edges
         cmds.select(*uvs, add=True)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return uvs
 
 
@@ -670,7 +668,7 @@ def curve_distribute_vertices(
         A tuple of the affected edges (the same as the end state selection if
         `create_deformer == False`).
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         if use_selection_order:
             # Check to make sure that selection order is being tracked, and
@@ -723,8 +721,7 @@ def curve_distribute_vertices(
             cmds.select(*selection)
             cmds.select(*edges, add=True)
             cmds.select(selected_vertices, deselect=True)
-            if cmds.waitCursor(query=True, state=True):
-                cmds.waitCursor(state=False)
+            set_wait_cursor_state(False)
             return edges
         # Go into object selection mode, in order to manipulate locators
         cmds.selectMode(object=True)
@@ -732,8 +729,7 @@ def curve_distribute_vertices(
         # an end locator
         cmds.select(locators[ceil(len(locators) / 2) - 1])
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return edges
 
 
@@ -766,7 +762,7 @@ def curve_distribute_uvs(
     Returns:
         A tuple of the affected UVs.
     """
-    cmds.waitCursor(state=True)
+    set_wait_cursor_state(True)
     try:
         if use_selection_order:
             # Check to make sure that selection order is being tracked, and
@@ -806,8 +802,7 @@ def curve_distribute_uvs(
         cmds.delete(curve_transform)
         cmds.select(*selection, *uvs, add=True)
     finally:
-        if cmds.waitCursor(query=True, state=True):
-            cmds.waitCursor(state=False)
+        set_wait_cursor_state(False)
     return edges
 
 

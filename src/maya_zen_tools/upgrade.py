@@ -6,9 +6,9 @@ needed to use ZenTools.
 from __future__ import annotations
 
 import argparse
-from subprocess import check_call
 
 from maya_zen_tools._utilities import (
+    check_call,
     get_maya_zen_tools_package_info,
     reload,
     which_mayapy,
