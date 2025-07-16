@@ -97,20 +97,41 @@ def find_zen_tools_package_directory() -> Path | None:
     return None
 
 
-@functools.wraps(subprocess.check_output)
-def check_output(*args: Any, **kwargs: Any) -> str:
+def check_output(
+    args: tuple[str, ...],
+    cwd: str | Path = "",
+    *,
+    echo: bool = False,
+) -> str:
     """
-    A wrapper around `subprocess.check_output` which will not open a console
-    window on Windows.
+    This function mimics `subprocess.check_output`, but redirects stderr
+    to DEVNULL, and ignores unicode decoding errors.
+
+    Parameters:
+        args: The command to run
+        cwd: The working directory to run the command in
+        echo: If `True`, print the command to the console before running it
     """
-    if sys.platform.startswith("win"):
-        kwargs["creationflags"] = (
-            kwargs.get("creationflags", 0) | subprocess.CREATE_NO_WINDOW
-        )
-    return subprocess.check_output(
-        *args,
-        **kwargs,
-    )
+    if echo:
+        if cwd:
+            print("$", "cd", cwd, "&&", subprocess.list2cmdline(args))  # noqa: T201
+        else:
+            print("$", subprocess.list2cmdline(args))  # noqa: T201
+    output: str = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=True,
+        cwd=cwd or None,
+        **(
+            {"creationflags": subprocess.CREATE_NO_WINDOW}  # type: ignore
+            if sys.platform.startswith("win")
+            else {}
+        ),
+    ).stdout.decode("utf-8", errors="ignore")
+    if echo:
+        print(output)  # noqa: T201
+    return output
 
 
 @functools.wraps(subprocess.check_call)
@@ -133,9 +154,18 @@ def get_maya_zen_tools_package_info() -> dict[str, str]:
     package_info: dict[str, str]
     for package_info in json.loads(
         check_output(
-            [str(which_mayapy()), "-m", "pip", "list", "--format", "json"],
-            text=True,
-        ).strip()
+            (
+                str(which_mayapy()),
+                "-m",
+                "pip",
+                "list",
+                "--disable-pip-version-check",
+                "--format",
+                "json",
+            ),
+        )
+        .strip()
+        .partition("\n\n")[0]
     ):
         if package_info["name"] == MAYA_ZEN_TOOLS:
             return package_info

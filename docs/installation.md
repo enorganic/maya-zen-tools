@@ -4,7 +4,8 @@
 ## Script Editor Installation
 
 You can install ZenTools for Maya by copy/pasting the following python snippet
-into your script editor:
+into your script editor, executing ([cmd] + [return] or [ctrl] + [enter]),
+then restarting Maya:
 
 ```python
 import os;
@@ -15,9 +16,7 @@ mayapy: str = str(
     Path(os.environ.get("MAYA_LOCATION")).joinpath("bin", "mayapy")
 );
 check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"]);
-from maya_zen_tools import install, startup;
-install.main();
-startup.main()
+check_call([mayapy, "-m", "maya_zen_tools", "install"])
 ```
 
 -   In Maya, select the "modeling" menu set. You can do this from the top-left

@@ -59,7 +59,7 @@ def show_about() -> None:
     )
     version: str = ""
     with contextlib.suppress(Exception):
-        get_maya_zen_tools_package_info()["version"]
+        version = get_maya_zen_tools_package_info()["version"]
     cmds.text(
         label=(
             f"\nZenTools {version} © "
