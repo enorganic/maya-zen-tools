@@ -40,6 +40,7 @@ addin:
 	cd ApplicationAddins && \
 	rm ZenTools.zip && \
 	zip -x **/.* -X -r ZenTools.zip ZenTools && \
+	cd ../ && \
 	hatch run python scripts/install_addin.py
 
 distribute:

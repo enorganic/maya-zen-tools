@@ -15,7 +15,7 @@ except ImportError:
         Path(os.environ.get("MAYA_LOCATION")).joinpath("bin", "mayapy")
     )
     check_call([mayapy, "-m", "pip", "install", "maya-zen-tools"])
-    from maya_zen_tools import install, startup
+    check_call([mayapy, "-m", "maya_zen_tools", "install"])
+    from maya_zen_tools import startup
 
-    install.main()
     startup.main()
