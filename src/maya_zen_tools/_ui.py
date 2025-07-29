@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 from maya import cmds  # type: ignore
 
 WINDOW: str = "zenToolsWindow"
@@ -68,6 +70,9 @@ def show_confirmation_dialogue(
     cmds.showWindow(CONFIRMATION_WINDOW)
 
 
+IS_WINDOWS: bool = sys.platform.startswith("win")
+
+
 def set_wait_cursor_state(state: bool) -> None:  # noqa: FBT001
     """
     Set the wait cursor state.
@@ -75,6 +80,10 @@ def set_wait_cursor_state(state: bool) -> None:  # noqa: FBT001
     Parameters:
         state: True to set the wait to "on", False to turn it off.
     """
+    if IS_WINDOWS:
+        # For some users, the wait cursor gets stuck on Windows, so we
+        # don't use it.
+        return
     if state and not cmds.waitCursor(query=True, state=True):
         cmds.waitCursor(state=True)
     else:
