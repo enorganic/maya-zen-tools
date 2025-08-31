@@ -36,4 +36,5 @@ in Maya?
     selections on your mesh on execution. This allows easy selection of
     multiple non-contiguous (such as parallel) edge paths, which is highly
     desirable when selecting edges for use with
-    [Loft Distribute Vertices Between Edges](modeling/loft-distribute-vertices-between-edges.md)
+    [Loft Distribute Vertices Between Edges](
+    ../modeling/loft-distribute-vertices-between-edges.md)

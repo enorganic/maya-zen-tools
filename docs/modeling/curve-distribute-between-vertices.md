@@ -10,7 +10,7 @@ you've selected:
 <p><video src="../../assets/videos/curve-distribute-between-vertices.mp4" controls=true /></p>
 
 Note: The vertices selected adhere to the same logic as
-[Select Edges Between Vertices](selection/select-edges-between-vertices.md).
+[Select Edges Between Vertices](../selection/select-edges-between-vertices.md).
 
 ## Proportional Distribution
 
