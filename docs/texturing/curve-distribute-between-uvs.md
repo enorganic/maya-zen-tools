@@ -9,7 +9,7 @@ not retained) NURBS curve passing between the UVs you've selected:
 <p><video src="../../assets/videos/curve-distribute-between-uvs.mp4" controls=true /></p>
 
 Note: The UVs selected adhere to the same logic as
-[Select UVs Between UVs](selection/select-uvs-between-uvs.md).
+[Select UVs Between UVs](../selection/select-uvs-between-uvs.md).
 
 ## Proportional Distribution
 

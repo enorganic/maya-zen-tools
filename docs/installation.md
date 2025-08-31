@@ -1,6 +1,13 @@
 
 # Installation
 
+## Autodesk App Store
+
+[Installers for Mac or Windows can be downloaded (free) from the Autodesk App
+Store.](https://apps.autodesk.com/MAYA/en/Detail/Index?id=4634919975196540444)
+
+[![ZenTools for Maya - Autodesk App Store](../assets/images/autodesk-app-store.png)](https://apps.autodesk.com/MAYA/en/Detail/Index?id=4634919975196540444)
+
 ## Script Editor Installation
 
 You can install ZenTools for Maya by copy/pasting the following python snippet
