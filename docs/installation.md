@@ -1,12 +1,25 @@
 
 # Installation
 
+!!! Important
+
+    If you have previously installed ZenTools from the Autodesk app store,
+    please note that the installer provided there is broken, and to fix your
+    installation you will need to delete the directory
+    `C:\ProgramData\Autodesk\ApplicationPlugins\ZenTools`
+    (Windows) or `/Users/Shared/Autodesk/ApplicationAddins/ZenTools` (Mac),
+    then follow the Script Editor Installation instructions below.
+
+<!--
+
 ## Autodesk App Store
 
 [Installers for Mac or Windows can be downloaded (free) from the Autodesk App
 Store.](https://apps.autodesk.com/MAYA/en/Detail/Index?id=4634919975196540444)
 
 [![ZenTools for Maya - Autodesk App Store](../assets/images/autodesk-app-store.png)](https://apps.autodesk.com/MAYA/en/Detail/Index?id=4634919975196540444)
+
+-->
 
 ## Script Editor Installation
 
