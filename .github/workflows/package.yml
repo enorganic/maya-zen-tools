@@ -28,7 +28,7 @@ jobs:
         --sign '${{ secrets.MACOS_CERTIFICATE_INSTALLER_COMMON_NAME }}' \
         --install-location /Users/Shared/Autodesk/ApplicationAddins/ZenTools \
         ./ApplicationAddins/ZenTools.pkg
-    - run: git stage . && git commit -m '*' && git push origin HEAD:${{ github.head_ref }}
+    - run: git stage . && git commit -m '*' && git push -f -u origin HEAD:${{ github.head_ref }}
   # windows:
   #   permissions:
   #     contents: write
