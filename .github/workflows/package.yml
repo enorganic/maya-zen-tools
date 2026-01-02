@@ -15,6 +15,10 @@ jobs:
         p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
     - name: Install Hatch
       uses: pypa/hatch@install
+    - name: configure git
+      run: |
+        git config --global user.email "$(git --no-pager show -s --format=%ae)" && \
+        git config --global user.name "$(git --no-pager show -s --format=%an)"
     - name: Build Mac Installer
       run: |
         pkgbuild \
