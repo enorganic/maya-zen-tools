@@ -124,3 +124,13 @@ docs:
 # Cleanup untracked files
 clean:
 	git add . && git clean -f -e .zen -e .vscode -e .idea -x .
+
+# Mac Installer
+pkg:
+	{ rm -f ./ApplicationAddins/ZenTools.pkg || true ; } && \
+	pkgbuild \
+	--root ./ApplicationAddins/ZenTools \
+	--identifier org.enorganic.zenTools \
+	--version "$$(hatch version)" \
+	--install-location /Users/Shared/Autodesk/ApplicationAddins/ZenTools \
+	./ApplicationAddins/ZenTools.pkg
