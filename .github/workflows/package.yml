@@ -1,0 +1,39 @@
+name: package
+on:
+  pull_request:
+jobs:
+  mac:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Import Apple Developer Certificate
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_INSTALLER_BASE64 }}
+        p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+    - name: Install Hatch
+      uses: pypa/hatch@install
+    - name: configure git
+      run: |
+        git config --global user.email "$(git --no-pager show -s --format=%ae)" && \
+        git config --global user.name "$(git --no-pager show -s --format=%an)"
+    - name: Build Mac Installer
+      run: |
+        pkgbuild \
+        --root ./ApplicationAddins/ZenTools \
+        --identifier org.enorganic.zenTools \
+        --version "$(hatch version)" \
+        --sign '${{ secrets.MACOS_CERTIFICATE_INSTALLER_COMMON_NAME }}' \
+        --install-location /Users/Shared/Autodesk/ApplicationAddins/ZenTools \
+        ./ApplicationAddins/ZenTools.pkg
+    - run: git stage . && git commit -m '*' && git push -f -u origin HEAD:${{ github.head_ref }}
+  # windows:
+  #   permissions:
+  #     contents: write
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - uses: microsoft/setup-msbuild@v2
+  #   - run: git stage . && git commit -m '*' && git push
